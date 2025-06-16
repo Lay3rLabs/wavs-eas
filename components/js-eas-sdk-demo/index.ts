@@ -39,11 +39,16 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
   const abiCoder = new AbiCoder();
   const [chainId, attestationId] = abiCoder.decode(["uint256", "string"], input);
 
-  const attestation = await fetchAttestation(Number(chainId), attestationId);
+  const attestation = await fetchAttestations(Number(chainId), attestationId);
   console.log("\nreceived attestation\n", JSON.stringify(attestation, null, 2));
-  const attestationJson = attestationToJson(attestation);
 
-  return new TextEncoder().encode(attestationJson);
+  const attestationJson = JSON.parse(attestation.data);
+  console.log("\ndecoded attestation data\n", JSON.stringify(attestationJson, null, 2));
+
+  const locationData = extractLocationFromAttestation(attestationJson);
+  console.log("\nextracted location data\n", JSON.stringify(locationData, null, 2));
+
+  return new TextEncoder().encode(JSON.stringify(locationData));
 }
 
 // ======================== EAS GraphQL ========================
@@ -63,12 +68,34 @@ interface AttestationData {
 }
 
 /**
+ * Converts a raw attestation object from GraphQL response to AttestationData format
+ * @param rawAttestation The raw attestation object from GraphQL
+ * @param chainId The chain ID to include in the result
+ * @returns AttestationData object
+ */
+function convertRawAttestationToData(rawAttestation: any, chainId: number): AttestationData {
+  return {
+    uid: rawAttestation.id,
+    schemaId: rawAttestation.schemaId,
+    refUID: rawAttestation.refUID,
+    time: Number(rawAttestation.time),
+    expirationTime: Number(rawAttestation.expirationTime),
+    revocationTime: Number(rawAttestation.revocationTime),
+    recipient: rawAttestation.recipient,
+    attester: rawAttestation.attester,
+    revocable: rawAttestation.revocable,
+    data: rawAttestation.decodedDataJson,
+    chainId: chainId,
+  };
+}
+
+/**
  * Fetches an attestation from the EAS GraphQL API by chain ID and attestation ID
  * @param chainId The chain ID where the attestation exists
  * @param attestationId The UID of the attestation
  * @returns A Promise that resolves to AttestationData
  */
-async function fetchAttestation(chainId: number, attestationId: string): Promise<AttestationData> {
+async function fetchAttestations(chainId: number, attestationId: string): Promise<AttestationData> {
   // Map chainId to EAS subgraph endpoint
   const endpoint = getEASGraphQLEndpoint(chainId);
   if (!endpoint) {
@@ -88,7 +115,7 @@ async function fetchAttestation(chainId: number, attestationId: string): Promise
         recipient
         attester
         revocable
-        data
+        decodedDataJson
       }
     }`;
 
@@ -113,24 +140,12 @@ async function fetchAttestation(chainId: number, attestationId: string): Promise
   }
 
   const { data } = await response.json();
-  if (!data || !data.attestations) {
-    throw new Error(`Attestation not found: ${attestationId}`);
+  if (!data || !data.attestations || data.attestations.length === 0) {
+    throw new Error(`No attestations found referencing attestationId: ${attestationId}`);
   }
 
-  const att = data.attestations[0];
-  return {
-    uid: att.id,
-    schemaId: att.schemaId,
-    refUID: att.refUID,
-    time: Number(att.time),
-    expirationTime: Number(att.expirationTime),
-    revocationTime: Number(att.revocationTime),
-    recipient: att.recipient,
-    attester: att.attester,
-    revocable: att.revocable,
-    data: att.data,
-    chainId: chainId,
-  };
+  const firstAttestation = data.attestations[0];
+  return convertRawAttestationToData(firstAttestation, chainId);
 }
 
 function getEASGraphQLEndpoint(chainId: number): string | null {
@@ -157,6 +172,33 @@ function attestationToJson(attestation: AttestationData): string {
         error instanceof Error ? error.message : String(error)
       }`
     );
+  }
+}
+
+/**
+ * Extracts the location field from the decoded attestation data array
+ * @param decodedData The decoded attestation data array
+ * @returns The location value as a parsed JSON object, or null if not found
+ */
+function extractLocationFromAttestation(decodedData: any[]): any {
+  if (!Array.isArray(decodedData)) {
+    throw new Error("Decoded attestation data is not an array");
+  }
+
+  const locationField = decodedData.find(field => field.name === "location");
+  if (!locationField) {
+    throw new Error("No location field found in attestation data");
+  }
+
+  if (!locationField.value || !locationField.value.value) {
+    throw new Error("Location field does not contain expected nested value structure");
+  }
+
+  try {
+    // Parse the location value which is a JSON string containing coordinates
+    return JSON.parse(locationField.value.value);
+  } catch (error) {
+    throw new Error(`Failed to parse location JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
