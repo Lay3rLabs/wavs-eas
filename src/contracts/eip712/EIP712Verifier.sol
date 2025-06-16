@@ -11,9 +11,7 @@ abstract contract EIP712Verifier {
     using ShortStrings for *;
 
     bytes32 private constant TYPE_HASH =
-        keccak256(
-            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-        );
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     address private immutable _target;
 
@@ -54,25 +52,13 @@ abstract contract EIP712Verifier {
 
     /// @dev Builds the domain separator for the current chain and for a specific target.
     function _buildDomainSeparator() private view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    TYPE_HASH,
-                    _hashedName,
-                    _hashedVersion,
-                    block.chainid,
-                    _target
-                )
-            );
+        return keccak256(abi.encode(TYPE_HASH, _hashedName, _hashedVersion, block.chainid, _target));
     }
 
     /// @dev Given an already hashed struct, this function returns the hash of the fully encoded EIP712 message for this
     /// domain.
     /// @param structHash The hashed struct to verify.
-    function _hashTypedDataV4(
-        bytes32 structHash
-    ) internal view virtual returns (bytes32) {
-        return
-            MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+    function _hashTypedDataV4(bytes32 structHash) internal view virtual returns (bytes32) {
+        return MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
     }
 }

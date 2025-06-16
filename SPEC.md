@@ -5,9 +5,11 @@ This is a an example that integrates Ethereum Attestation Service (EAS) with ver
 This allows for AVSs to make attestations and perform computations over attestation graphs.
 
 TODO:
-- Convert eas-contracts-examples Tests to solidity
-- Deploy scripts
-- Simple UI to make attestations
+1. Modify attester.sol to implement the IWavsServiceHandler interface, on handleSignedEnvelope it should make an attestation
+2. Deploy scripts to deploy EAS contracts (WAVS tooling already handles deploying other contracts)
+3. WAVS component that makes an attestation
+4. A WAVS AVS that performs computations over attestations
+5. Simple UI to make attestations
 
 WAVS Component Examples:
 - An WAVS AVS that can make attestations

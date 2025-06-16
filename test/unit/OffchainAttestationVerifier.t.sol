@@ -45,11 +45,7 @@ contract OffchainAttestationVerifierTest is Test {
         verifier = new OffchainAttestationVerifier(IEAS(address(eas)));
 
         // Register schema
-        schemaId = schemaRegistry.register(
-            SCHEMA,
-            ISchemaResolver(address(0)),
-            true
-        );
+        schemaId = schemaRegistry.register(SCHEMA, ISchemaResolver(address(0)), true);
     }
 
     function testConstruction_ShouldRevertWithInvalidEAS() public {
@@ -62,8 +58,7 @@ contract OffchainAttestationVerifierTest is Test {
     }
 
     function testVerify_LegacyVersion_ShouldVerify() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(LEGACY);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(LEGACY);
 
         // Sign the attestation
         bytes32 hash = _getTypedDataHash(attestation);
@@ -74,8 +69,7 @@ contract OffchainAttestationVerifierTest is Test {
     }
 
     function testVerify_Version1_ShouldVerify() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(VERSION1);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(VERSION1);
 
         // Sign the attestation
         bytes32 hash = _getTypedDataHash(attestation);
@@ -86,8 +80,7 @@ contract OffchainAttestationVerifierTest is Test {
     }
 
     function testVerify_Version2_ShouldVerify() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(VERSION2);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(VERSION2);
         attestation.salt = keccak256("test_salt");
 
         // Sign the attestation
@@ -99,16 +92,14 @@ contract OffchainAttestationVerifierTest is Test {
     }
 
     function testVerify_ShouldFailWithInvalidAttester() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(LEGACY);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(LEGACY);
         attestation.attester = ZERO_ADDRESS;
 
         assertFalse(verifier.verify(attestation));
     }
 
     function testVerify_ShouldFailWithFutureTime() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(LEGACY);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(LEGACY);
         attestation.time = uint64(block.timestamp + 365 days);
 
         // Sign the attestation
@@ -120,8 +111,7 @@ contract OffchainAttestationVerifierTest is Test {
     }
 
     function testVerify_ShouldFailWithInvalidSchema() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(LEGACY);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(LEGACY);
         attestation.schema = ZERO_BYTES32;
 
         // Sign the attestation
@@ -133,8 +123,7 @@ contract OffchainAttestationVerifierTest is Test {
     }
 
     function testVerify_ShouldFailWithInvalidRefUID() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(LEGACY);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(LEGACY);
         attestation.refUID = keccak256("BAD_REF");
 
         // Sign the attestation
@@ -146,22 +135,16 @@ contract OffchainAttestationVerifierTest is Test {
     }
 
     function testVerify_ShouldFailWithInvalidSignature() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(LEGACY);
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(LEGACY);
 
         // Create invalid signature
-        attestation.signature = Signature(
-            27,
-            keccak256("BAD_SIG"),
-            bytes32(uint256(1))
-        );
+        attestation.signature = Signature(27, keccak256("BAD_SIG"), bytes32(uint256(1)));
 
         assertFalse(verifier.verify(attestation));
     }
 
     function testVerify_ShouldFailWithUnknownVersion() public {
-        OffchainAttestationVerifier.OffchainAttestation
-            memory attestation = _createAttestation(999); // Unknown version
+        OffchainAttestationVerifier.OffchainAttestation memory attestation = _createAttestation(999); // Unknown version
 
         // Sign the attestation
         bytes32 hash = _getTypedDataHash(attestation);
@@ -171,32 +154,31 @@ contract OffchainAttestationVerifierTest is Test {
         assertFalse(verifier.verify(attestation));
     }
 
-    function _createAttestation(
-        uint16 version
-    )
+    function _createAttestation(uint16 version)
         internal
         view
         returns (OffchainAttestationVerifier.OffchainAttestation memory)
     {
-        return
-            OffchainAttestationVerifier.OffchainAttestation({
-                version: version,
-                attester: attester,
-                schema: schemaId,
-                recipient: recipient,
-                time: uint64(block.timestamp),
-                expirationTime: NO_EXPIRATION,
-                revocable: false,
-                refUID: ZERO_BYTES32,
-                data: ZERO_BYTES,
-                salt: version == VERSION2 ? ZERO_BYTES32 : ZERO_BYTES32,
-                signature: Signature(0, bytes32(0), bytes32(0))
-            });
+        return OffchainAttestationVerifier.OffchainAttestation({
+            version: version,
+            attester: attester,
+            schema: schemaId,
+            recipient: recipient,
+            time: uint64(block.timestamp),
+            expirationTime: NO_EXPIRATION,
+            revocable: false,
+            refUID: ZERO_BYTES32,
+            data: ZERO_BYTES,
+            salt: version == VERSION2 ? ZERO_BYTES32 : ZERO_BYTES32,
+            signature: Signature(0, bytes32(0), bytes32(0))
+        });
     }
 
-    function _getTypedDataHash(
-        OffchainAttestationVerifier.OffchainAttestation memory attestation
-    ) internal view returns (bytes32) {
+    function _getTypedDataHash(OffchainAttestationVerifier.OffchainAttestation memory attestation)
+        internal
+        view
+        returns (bytes32)
+    {
         // This is a simplified version - in a real implementation, you'd need to properly construct
         // the EIP-712 typed data hash based on the version
         bytes32 structHash;
@@ -257,9 +239,7 @@ contract OffchainAttestationVerifierTest is Test {
         // Create domain separator
         bytes32 domainSeparator = keccak256(
             abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256("EAS Attestation"),
                 keccak256(bytes(eas.version())),
                 block.chainid,
@@ -267,9 +247,6 @@ contract OffchainAttestationVerifierTest is Test {
             )
         );
 
-        return
-            keccak256(
-                abi.encodePacked("\x19\x01", domainSeparator, structHash)
-            );
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
     }
 }

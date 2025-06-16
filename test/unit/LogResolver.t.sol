@@ -5,7 +5,13 @@ import {Test} from "forge-std/Test.sol";
 import {LogResolver} from "../../src/contracts/LogResolver.sol";
 import {EAS} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import {SchemaRegistry} from "@ethereum-attestation-service/eas-contracts/contracts/SchemaRegistry.sol";
-import {IEAS, AttestationRequest, AttestationRequestData, RevocationRequest, RevocationRequestData} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
+import {
+    IEAS,
+    AttestationRequest,
+    AttestationRequestData,
+    RevocationRequest,
+    RevocationRequestData
+} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 import {ISchemaRegistry} from "@ethereum-attestation-service/eas-contracts/contracts/ISchemaRegistry.sol";
 import {NO_EXPIRATION_TIME, EMPTY_UID} from "@ethereum-attestation-service/eas-contracts/contracts/Common.sol";
 
@@ -105,12 +111,7 @@ contract LogResolverTest is Test {
         vm.expectEmit(true, true, true, true);
         emit LogResolver.Revoked(schemaId, testValue);
 
-        eas.revoke(
-            RevocationRequest({
-                schema: schemaId,
-                data: RevocationRequestData({uid: uid, value: 0})
-            })
-        );
+        eas.revoke(RevocationRequest({schema: schemaId, data: RevocationRequestData({uid: uid, value: 0})}));
     }
 
     function testOnRevoke_ShouldHandleMultipleRevocations() public {
@@ -142,12 +143,7 @@ contract LogResolverTest is Test {
             vm.expectEmit(true, true, true, true);
             emit LogResolver.Revoked(schemaId, values[i]);
 
-            eas.revoke(
-                RevocationRequest({
-                    schema: schemaId,
-                    data: RevocationRequestData({uid: uids[i], value: 0})
-                })
-            );
+            eas.revoke(RevocationRequest({schema: schemaId, data: RevocationRequestData({uid: uids[i], value: 0})}));
         }
     }
 
@@ -209,11 +205,6 @@ contract LogResolverTest is Test {
         emit LogResolver.Revoked(schemaId, testValue);
 
         // Revoke attestation
-        eas.revoke(
-            RevocationRequest({
-                schema: schemaId,
-                data: RevocationRequestData({uid: uid, value: 0})
-            })
-        );
+        eas.revoke(RevocationRequest({schema: schemaId, data: RevocationRequestData({uid: uid, value: 0})}));
     }
 }

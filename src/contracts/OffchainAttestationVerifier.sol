@@ -35,8 +35,7 @@ contract OffchainAttestationVerifier is EIP712Verifier {
 
     // The hash of the data type used to relay calls to the attest function. It's the value of
     // keccak256("Attestation(bytes32 schema,address recipient,uint64 time,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data)").
-    bytes32 private constant LEGACY_ATTEST_TYPEHASH =
-        0x2fcbc49c85ccde58f6986371b0828354351185c921aebbaace3e89e0e023b25d;
+    bytes32 private constant LEGACY_ATTEST_TYPEHASH = 0x2fcbc49c85ccde58f6986371b0828354351185c921aebbaace3e89e0e023b25d;
 
     // The hash of the data type used to relay calls to the attest function. It's the value of
     // keccak256("Attest(uint16 version,bytes32 schema,address recipient,uint64 time,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data)").
@@ -53,9 +52,7 @@ contract OffchainAttestationVerifier is EIP712Verifier {
 
     /// @notice Creates a new Attester instance.
     /// @param eas The address of the global EAS contract.
-    constructor(
-        IEAS eas
-    ) EIP712Verifier("EAS Attestation", eas.version(), address(eas)) {
+    constructor(IEAS eas) EIP712Verifier("EAS Attestation", eas.version(), address(eas)) {
         _eas = eas;
     }
 
@@ -67,9 +64,7 @@ contract OffchainAttestationVerifier is EIP712Verifier {
     /// @notice Verify the offchain attestation.
     /// @param attestation The offchain attestation to verify.
     /// @return The status of the verification.
-    function verify(
-        OffchainAttestation calldata attestation
-    ) external view returns (bool) {
+    function verify(OffchainAttestation calldata attestation) external view returns (bool) {
         if (attestation.attester == address(0)) {
             return false;
         }
@@ -86,18 +81,13 @@ contract OffchainAttestationVerifier is EIP712Verifier {
         }
 
         // Verify that the schema exists.
-        SchemaRecord memory schemaRecord = _eas.getSchemaRegistry().getSchema(
-            attestation.schema
-        );
+        SchemaRecord memory schemaRecord = _eas.getSchemaRegistry().getSchema(attestation.schema);
         if (schemaRecord.uid == EMPTY_UID) {
             return false;
         }
 
         // Verify that the referenced attestation exists.
-        if (
-            attestation.refUID != EMPTY_UID &&
-            !_eas.isAttestationValid(attestation.refUID)
-        ) {
+        if (attestation.refUID != EMPTY_UID && !_eas.isAttestationValid(attestation.refUID)) {
             return false;
         }
 
@@ -117,9 +107,7 @@ contract OffchainAttestationVerifier is EIP712Verifier {
         Signature memory signature = attestation.signature;
         if (
             !SignatureChecker.isValidSignatureNow(
-                attestation.attester,
-                hash,
-                abi.encodePacked(signature.r, signature.s, signature.v)
+                attestation.attester, hash, abi.encodePacked(signature.r, signature.s, signature.v)
             )
         ) {
             return false;
@@ -131,73 +119,64 @@ contract OffchainAttestationVerifier is EIP712Verifier {
     /// @dev Returns the legacy (version 0) attestation typed data hash
     /// @param attestation The offchain attestation to verify.
     /// @return The typed data hash.
-    function _hashTypedDataLegacy(
-        OffchainAttestation calldata attestation
-    ) private view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        LEGACY_ATTEST_TYPEHASH,
-                        attestation.schema,
-                        attestation.recipient,
-                        attestation.time,
-                        attestation.expirationTime,
-                        attestation.revocable,
-                        attestation.refUID,
-                        keccak256(attestation.data)
-                    )
+    function _hashTypedDataLegacy(OffchainAttestation calldata attestation) private view returns (bytes32) {
+        return _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    LEGACY_ATTEST_TYPEHASH,
+                    attestation.schema,
+                    attestation.recipient,
+                    attestation.time,
+                    attestation.expirationTime,
+                    attestation.revocable,
+                    attestation.refUID,
+                    keccak256(attestation.data)
                 )
-            );
+            )
+        );
     }
 
     /// @dev Returns the version 1 attestation typed data hash
     /// @param attestation The offchain attestation to verify.
     /// @return The typed data hash.
-    function _hashTypedDataVersion1(
-        OffchainAttestation calldata attestation
-    ) private view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        VERSION1_ATTEST_TYPEHASH,
-                        VERSION1,
-                        attestation.schema,
-                        attestation.recipient,
-                        attestation.time,
-                        attestation.expirationTime,
-                        attestation.revocable,
-                        attestation.refUID,
-                        keccak256(attestation.data)
-                    )
+    function _hashTypedDataVersion1(OffchainAttestation calldata attestation) private view returns (bytes32) {
+        return _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    VERSION1_ATTEST_TYPEHASH,
+                    VERSION1,
+                    attestation.schema,
+                    attestation.recipient,
+                    attestation.time,
+                    attestation.expirationTime,
+                    attestation.revocable,
+                    attestation.refUID,
+                    keccak256(attestation.data)
                 )
-            );
+            )
+        );
     }
 
     /// @dev Returns the version 2 attestation typed data hash
     /// @param attestation The offchain attestation to verify.
     /// @return The typed data hash.
-    function _hashTypedDataVersion2(
-        OffchainAttestation calldata attestation
-    ) private view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        VERSION2_ATTEST_TYPEHASH,
-                        VERSION2,
-                        attestation.schema,
-                        attestation.recipient,
-                        attestation.time,
-                        attestation.expirationTime,
-                        attestation.revocable,
-                        attestation.refUID,
-                        keccak256(attestation.data),
-                        attestation.salt
-                    )
+    function _hashTypedDataVersion2(OffchainAttestation calldata attestation) private view returns (bytes32) {
+        return _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    VERSION2_ATTEST_TYPEHASH,
+                    VERSION2,
+                    attestation.schema,
+                    attestation.recipient,
+                    attestation.time,
+                    attestation.expirationTime,
+                    attestation.revocable,
+                    attestation.refUID,
+                    keccak256(attestation.data),
+                    attestation.salt
                 )
-            );
+            )
+        );
     }
 
     /// @dev Returns the current's block timestamp. This method is overridden during tests and used to simulate the

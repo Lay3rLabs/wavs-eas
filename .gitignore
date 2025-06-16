@@ -19,3 +19,10 @@ infra/*
 
 # Tools
 **/.claude/settings.local.json
+
+# Claud Code
+anvil
+cast
+chisel
+forge
+foundry_nightly_linux_arm64.tar.gz
