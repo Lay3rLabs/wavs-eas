@@ -6,38 +6,34 @@ import {ITypes} from "interfaces/ITypes.sol";
 import {Common} from "script/Common.s.sol";
 import {console} from "forge-std/console.sol";
 
-/// @dev Script to add a new trigger with EAS attestation data
+/// @dev Script to add a new trigger for EAS attestations
 contract Trigger is Common {
-    /// @notice Original function for backward compatibility (now creates EAS attestation)
     function run(
         string calldata serviceTriggerAddr,
-        string calldata data
+        uint256 chainId,
+        string calldata attestationId
     ) public {
         vm.startBroadcast(_privateKey);
         SimpleTrigger trigger = SimpleTrigger(
             vm.parseAddress(serviceTriggerAddr)
         );
 
-        // Create JSON payload for EAS attestation component
-        string memory easJsonPayload = string(
-            abi.encodePacked(
-                '{"schema":"0x0000000000000000000000000000000000000000000000000000000000000000",',
-                '"recipient":"0x0000000000000000000000000000000000000000",',
-                '"data":"',
-                data,
-                '",',
-                '"expiration_time":0,"revocable":true}'
-            )
+        // Create JSON payload with chainId and attestationId
+        string memory payload = string.concat(
+            '{"chainId":',
+            vm.toString(chainId),
+            ',"attestationId":"',
+            attestationId,
+            '"}'
         );
 
-        trigger.addTrigger(bytes(easJsonPayload));
+        trigger.addTrigger(bytes(payload));
 
         ITypes.TriggerId triggerId = trigger.nextTriggerId();
         console.log(
             "EAS Attestation TriggerId:",
             ITypes.TriggerId.unwrap(triggerId)
         );
-        console.log("Attestation Data:", data);
         vm.stopBroadcast();
     }
 

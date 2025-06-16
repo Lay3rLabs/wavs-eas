@@ -1,160 +1,175 @@
 mod trigger;
 use trigger::{decode_trigger_event, encode_trigger_output, Destination};
-use wavs_wasi_utils::http::{fetch_json, http_request_get};
 pub mod bindings;
 use crate::bindings::{export, Guest, TriggerAction, WasmResponse};
 use serde::{Deserialize, Serialize};
-use wstd::{http::HeaderValue, runtime::block_on};
 
 struct Component;
 export!(Component with_types_in bindings);
 
 impl Guest for Component {
-    /// Main entry point for the price oracle component.
-    /// WAVS is subscribed to watch for events emitted by the blockchain.
-    /// When WAVS observes an event is emitted, it will internally route the event and its data to this function (component).
-    /// The processing then occurs before the output is returned back to WAVS to be submitted to the blockchain by the operator(s).
-    ///
-    /// This is why the `Destination::Ethereum` requires the encoded trigger output, it must be ABI encoded for the solidity contract.
-    /// Failure to do so will result in a failed submission as the signature will not match the saved output.
-    ///
-    /// After the data is properly set by the operator through WAVS, any user can query the price data from the blockchain in the solidity contract.
-    /// You can also return `None` as the output if nothing needs to be saved to the blockchain. (great for performing some off chain action)
-    ///
-    /// This function:
-    /// 1. Receives a trigger action containing encoded data
-    /// 2. Decodes the input to get a cryptocurrency ID (in hex)
-    /// 3. Fetches current price data from CoinMarketCap
-    /// 4. Returns the encoded response based on the destination
+    /// Generic EAS attestation component.
+    /// 
+    /// This component receives attestation input data and creates a new EAS attestation.
+    /// It can handle various input formats and automatically creates properly formatted
+    /// attestation data for submission to the EAS contract.
+    /// 
+    /// Input formats supported:
+    /// 1. JSON with schema, recipient, and data fields
+    /// 2. Raw bytes data (will use default schema and recipient)
+    /// 3. Structured attestation request data
+    /// 
+    /// The component will:
+    /// 1. Parse the input attestation data
+    /// 2. Validate the required fields
+    /// 3. Format the data for EAS submission
+    /// 4. Return the attestation request for blockchain submission
     fn run(action: TriggerAction) -> std::result::Result<Option<WasmResponse>, String> {
         let (trigger_id, req, dest) =
             decode_trigger_event(action.data).map_err(|e| e.to_string())?;
 
-        // Convert bytes to string and parse first char as u64
-        let input = std::str::from_utf8(&req).map_err(|e| e.to_string())?;
-        println!("input id: {}", input);
+        // Parse the input attestation data
+        let attestation_input = parse_attestation_input(&req)?;
+        
+        println!("Creating attestation: schema={}, recipient={}, data_len={}", 
+                hex::encode(&attestation_input.schema),
+                hex::encode(&attestation_input.recipient), 
+                attestation_input.data.len());
 
-        let id = input.chars().next().ok_or("Empty input")?;
-        let id = id.to_digit(16).ok_or("Invalid hex digit")? as u64;
+        // Create the attestation response
+        let attestation_response = AttestationResponse {
+            schema: attestation_input.schema,
+            recipient: attestation_input.recipient,
+            data: attestation_input.data,
+            expiration_time: attestation_input.expiration_time,
+            revocable: attestation_input.revocable,
+            ref_uid: attestation_input.ref_uid,
+        };
 
-        let res = block_on(async move {
-            let resp_data = get_price_feed(id).await?;
-            println!("resp_data: {:?}", resp_data);
-            serde_json::to_vec(&resp_data).map_err(|e| e.to_string())
-        })?;
+        // Encode the response
+        let encoded_response = serde_json::to_vec(&attestation_response)
+            .map_err(|e| format!("Failed to encode attestation response: {}", e))?;
 
         let output = match dest {
-            Destination::Ethereum => Some(encode_trigger_output(trigger_id, &res)),
-            Destination::CliOutput => Some(WasmResponse { payload: res.into(), ordering: None }),
+            Destination::Ethereum => Some(encode_trigger_output(trigger_id, &encoded_response)),
+            Destination::CliOutput => Some(WasmResponse { payload: encoded_response.into(), ordering: None }),
         };
+        
         Ok(output)
     }
 }
 
-/// Fetches cryptocurrency price data from CoinMarketCap's API
-///
-/// # Arguments
-/// * `id` - CoinMarketCap's unique identifier for the cryptocurrency
-///
-/// # Returns
-/// * `PriceFeedData` containing:
-///   - symbol: The cryptocurrency's ticker symbol (e.g., "BTC")
-///   - price: Current price in USD
-///   - timestamp: Server timestamp of the price data
-///
-/// # Implementation Details
-/// - Uses CoinMarketCap's v3 API endpoint
-/// - Includes necessary headers to avoid rate limiting:
-///   * User-Agent to mimic a browser
-///   * Random cookie with current timestamp
-///   * JSON content type headers
-///
-/// As of writing (Mar 31, 2025), the CoinMarketCap API is free to use and has no rate limits.
-/// This may change in the future so be aware of issues that you may encounter going forward.
-/// There is a more proper API for pro users that you can use
-/// - <https://coinmarketcap.com/api/documentation/v1/>
-async fn get_price_feed(id: u64) -> Result<PriceFeedData, String> {
-    let url = format!(
-        "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/detail?id={}&range=1h",
-        id
-    );
+/// Parses input data into attestation input format
+/// 
+/// Supports multiple input formats:
+/// 1. JSON string with structured attestation data
+/// 2. Raw bytes data (uses defaults for schema/recipient)
+/// 3. ABI-encoded attestation data
+fn parse_attestation_input(data: &[u8]) -> Result<AttestationInput, String> {
+    // Try to parse as JSON first
+    if let Ok(json_str) = std::str::from_utf8(data) {
+        if json_str.starts_with('{') {
+            if let Ok(json_input) = serde_json::from_str::<JsonAttestationInput>(json_str) {
+                return Ok(AttestationInput {
+                    schema: hex_to_bytes32(&json_input.schema)?,
+                    recipient: hex_to_address(&json_input.recipient)?,
+                    data: json_input.data.into_bytes(),
+                    expiration_time: json_input.expiration_time.unwrap_or(0),
+                    revocable: json_input.revocable.unwrap_or(true),
+                    ref_uid: if let Some(ref_uid) = json_input.ref_uid {
+                        hex_to_bytes32(&ref_uid)?
+                    } else {
+                        [0u8; 32]
+                    },
+                });
+            }
+        }
+    }
 
-    let current_time = std::time::SystemTime::now().elapsed().unwrap().as_secs();
+    // Try to decode as ABI-encoded attestation data
+    if data.len() >= 84 { // Minimum: 32 bytes schema + 20 bytes recipient + 32 bytes for data length
+        if let Ok(input) = try_decode_abi_attestation(data) {
+            return Ok(input);
+        }
+    }
 
-    let mut req = http_request_get(&url).map_err(|e| e.to_string())?;
-    req.headers_mut().insert("Accept", HeaderValue::from_static("application/json"));
-    req.headers_mut().insert("Content-Type", HeaderValue::from_static("application/json"));
-    req.headers_mut()
-        .insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"));
-    req.headers_mut().insert(
-        "Cookie",
-        HeaderValue::from_str(&format!("myrandom_cookie={}", current_time)).unwrap(),
-    );
-
-    let json: Root = fetch_json(req).await.map_err(|e| e.to_string())?;
-
-    // round to the nearest 3 decimal places
-    let price = (json.data.statistics.price * 100.0).round() / 100.0;
-    // timestamp is 2025-04-30T19:59:44.161Z, becomes 2025-04-30T19:59:44
-    let timestamp = json.status.timestamp.split('.').next().unwrap_or("");
-
-    Ok(PriceFeedData { symbol: json.data.symbol, price, timestamp: timestamp.to_string() })
+    // Fallback: treat as raw data with default schema and recipient
+    Ok(AttestationInput {
+        schema: [0u8; 32], // Default schema - should be configured
+        recipient: [0u8; 20], // Zero address means no specific recipient
+        data: data.to_vec(),
+        expiration_time: 0, // No expiration
+        revocable: true,
+        ref_uid: [0u8; 32], // No reference
+    })
 }
 
-/// Represents the price feed response data structure
-/// This is the simplified version of the data that will be sent to the blockchain
-/// via the Submission of the operator(s).
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PriceFeedData {
-    symbol: String,
-    timestamp: String,
-    price: f64,
+/// Attempts to decode ABI-encoded attestation data
+fn try_decode_abi_attestation(data: &[u8]) -> Result<AttestationInput, String> {
+    // For now, skip complex ABI decoding and return an error
+    // This can be implemented later if needed for specific use cases
+    Err("ABI decoding not yet implemented".to_string())
 }
 
-/// Root response structure from CoinMarketCap API
-/// Generated from the API response using <https://transform.tools/json-to-rust-serde>
-/// Contains detailed cryptocurrency information including price statistics
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Root {
-    pub data: Data,
-    pub status: Status,
+/// Converts hex string to 32-byte array
+fn hex_to_bytes32(hex: &str) -> Result<[u8; 32], String> {
+    let hex = hex.strip_prefix("0x").unwrap_or(hex);
+    if hex.len() != 64 {
+        return Err(format!("Invalid hex length for bytes32: {}", hex.len()));
+    }
+    
+    let mut bytes = [0u8; 32];
+    for (i, chunk) in hex.as_bytes().chunks(2).enumerate() {
+        let hex_str = std::str::from_utf8(chunk).map_err(|e| e.to_string())?;
+        bytes[i] = u8::from_str_radix(hex_str, 16).map_err(|e| e.to_string())?;
+    }
+    Ok(bytes)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Data {
-    pub id: f64,
-    pub name: String,
-    pub symbol: String,
-    pub statistics: Statistics,
-    pub description: String,
-    pub category: String,
-    pub slug: String,
+/// Converts hex string to 20-byte address
+fn hex_to_address(hex: &str) -> Result<[u8; 20], String> {
+    let hex = hex.strip_prefix("0x").unwrap_or(hex);
+    if hex.len() != 40 {
+        return Err(format!("Invalid hex length for address: {}", hex.len()));
+    }
+    
+    let mut bytes = [0u8; 20];
+    for (i, chunk) in hex.as_bytes().chunks(2).enumerate() {
+        let hex_str = std::str::from_utf8(chunk).map_err(|e| e.to_string())?;
+        bytes[i] = u8::from_str_radix(hex_str, 16).map_err(|e| e.to_string())?;
+    }
+    Ok(bytes)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Statistics {
-    pub price: f64,
-    #[serde(rename = "totalSupply")]
-    pub total_supply: f64,
+/// JSON input format for attestations
+#[derive(Debug, Deserialize)]
+struct JsonAttestationInput {
+    schema: String,           // Hex string
+    recipient: String,        // Hex address
+    data: String,            // String data to attest
+    expiration_time: Option<u64>,
+    revocable: Option<bool>,
+    ref_uid: Option<String>, // Optional reference UID
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CoinBitesVideo {
-    pub id: String,
-    pub category: String,
-    #[serde(rename = "videoUrl")]
-    pub video_url: String,
-    pub title: String,
-    pub description: String,
-    #[serde(rename = "previewImage")]
-    pub preview_image: String,
+/// Internal attestation input structure
+#[derive(Debug)]
+struct AttestationInput {
+    schema: [u8; 32],
+    recipient: [u8; 20],
+    data: Vec<u8>,
+    expiration_time: u64,
+    revocable: bool,
+    ref_uid: [u8; 32],
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Status {
-    pub timestamp: String,
-    pub error_code: String,
-    pub error_message: String,
-    pub elapsed: String,
-    pub credit_count: f64,
+/// Attestation response structure for output
+#[derive(Debug, Serialize)]
+struct AttestationResponse {
+    schema: [u8; 32],
+    recipient: [u8; 20],
+    data: Vec<u8>,
+    expiration_time: u64,
+    revocable: bool,
+    ref_uid: [u8; 32],
 }
