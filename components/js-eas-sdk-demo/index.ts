@@ -1,6 +1,5 @@
 import { TriggerAction, WasmResponse } from "./out/wavs:worker@0.4.0-beta.4";
 import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
-import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
 
 async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
@@ -44,15 +43,15 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
   return new TextEncoder().encode(attestationJson);
 }
 
-// ======================== EAS ========================
+// ======================== EAS GraphQL ========================
 
 interface AttestationData {
   uid: string;
-  schema: string;
+  schemaId: string;
   refUID: string;
-  time: bigint;
-  expirationTime: bigint;
-  revocationTime: bigint;
+  time: number;
+  expirationTime: number;
+  revocationTime: number;
   recipient: string;
   attester: string;
   revocable: boolean;
@@ -61,42 +60,80 @@ interface AttestationData {
 }
 
 /**
- * Fetches an attestation from the EAS API by chain ID and attestation ID
+ * Fetches an attestation from the EAS GraphQL API by chain ID and attestation ID
  * @param chainId The chain ID where the attestation exists
  * @param attestationId The UID of the attestation
  * @returns A Promise that resolves to AttestationData
  */
 async function fetchAttestation(chainId: number, attestationId: string): Promise<AttestationData> {
-  // Initialize EAS SDK
-  const eas = new EAS("https://easscan.org/graphql");
+  // Map chainId to EAS subgraph endpoint
+  const endpoint = getEASGraphQLEndpoint(chainId);
+  if (!endpoint) {
+    throw new Error(`Unsupported chainId: ${chainId}`);
+  }
 
-  try {
-    // Fetch the attestation
-    const attestation = await eas.getAttestation(attestationId);
-
-    if (!attestation) {
-      throw new Error(`Attestation not found: ${attestationId}`);
+  const query = `
+    query GetAttestation($uid: String!) {
+      attestation(id: $uid) {
+        id
+        schemaId
+        refUID
+        time
+        expirationTime
+        revocationTime
+        recipient
+        attester
+        revocable
+        data
+      }
     }
+  `;
 
-    return {
-      uid: attestation.uid,
-      schema: attestation.schema,
-      refUID: attestation.refUID,
-      time: attestation.time,
-      expirationTime: attestation.expirationTime,
-      revocationTime: attestation.revocationTime,
-      recipient: attestation.recipient,
-      attester: attestation.attester,
-      revocable: attestation.revocable,
-      data: attestation.data,
-      chainId: chainId
-    };
-  } catch (error) {
-    throw new Error(
-      `Failed to fetch attestation: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query,
+      variables: { uid: attestationId },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`GraphQL error: ${response.status}`);
+  }
+
+  const { data } = await response.json();
+  if (!data || !data.attestation) {
+    throw new Error(`Attestation not found: ${attestationId}`);
+  }
+
+  const att = data.attestation;
+  return {
+    uid: att.id,
+    schemaId: att.schemaId,
+    refUID: att.refUID,
+    time: Number(att.time),
+    expirationTime: Number(att.expirationTime),
+    revocationTime: Number(att.revocationTime),
+    recipient: att.recipient,
+    attester: att.attester,
+    revocable: att.revocable,
+    data: att.data,
+    chainId: chainId,
+  };
+}
+
+function getEASGraphQLEndpoint(chainId: number): string | null {
+  // Add more chain IDs and endpoints as needed
+  switch (chainId) {
+    case 1:
+      return "https://mainnet.easscan.org/graphql";
+    case 10:
+      return "https://optimism.easscan.org/graphql";
+    case 11155111:
+      return "https://sepolia.easscan.org/graphql";
+    default:
+      return null;
   }
 }
 
