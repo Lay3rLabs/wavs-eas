@@ -3,6 +3,8 @@ import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
 import { ethers } from "ethers";
 import { AbiCoder } from "ethers";
 import { hexlify } from "ethers";
+import booleanContains from "@turf/boolean-contains";
+import { point, polygon } from "@turf/helpers";
 
 async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   let event = decodeTriggerEvent(triggerAction.data);
@@ -39,22 +41,45 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
   const abiCoder = new AbiCoder();
   const [chainId, attestationId] = abiCoder.decode(["uint256", "string"], input);
 
-  const attestations = await fetchAttestations(Number(chainId), attestationId);
+  const { attestations, locationAttestation } = await fetchAttestations(Number(chainId), attestationId);
   console.log(`\nreceived ${attestations.length} attestations\n`);
 
-  const locations = attestations.map((attestation, index) => {
+  if (!locationAttestation) {
+    throw new Error("No location attestation found for polygon containment testing");
+  }
+
+  // Extract polygon from location attestation
+  const locationAttestationJson = JSON.parse(locationAttestation.data);
+  const polygonData = extractLocationFromAttestation(locationAttestationJson);
+  console.log(`\npolygon data from location attestation\n`, JSON.stringify(polygonData, null, 2));
+
+  // Create turf polygon from the location attestation
+  const turfPolygon = polygon(polygonData.coordinates);
+
+  const containmentResults = attestations.map((attestation, index) => {
     const attestationJson = JSON.parse(attestation.data);
     console.log(`\ndecoded attestation ${index + 1} data\n`, JSON.stringify(attestationJson, null, 2));
 
     const locationData = extractLocationFromAttestation(attestationJson);
     console.log(`\nextracted location from attestation ${index + 1}\n`, JSON.stringify(locationData, null, 2));
 
-    return locationData;
+    // Create turf point from the attestation location
+    const turfPoint = point(locationData.coordinates);
+
+    // Test containment
+    const isContained = booleanContains(turfPolygon, turfPoint);
+    console.log(`\nattestation ${index + 1} point ${isContained ? 'IS' : 'IS NOT'} contained in polygon\n`);
+
+    return {
+      attestationId: attestation.uid,
+      location: locationData,
+      isContainedInPolygon: isContained
+    };
   });
 
-  console.log(`\nall extracted locations (${locations.length} total)\n`, JSON.stringify(locations, null, 2));
+  console.log(`\ncontainment test results (${containmentResults.length} total)\n`, JSON.stringify(containmentResults, null, 2));
 
-  return new TextEncoder().encode(JSON.stringify(locations));
+  return new TextEncoder().encode(JSON.stringify(containmentResults));
 }
 
 // ======================== EAS GraphQL ========================
@@ -84,9 +109,12 @@ function convertRawAttestationToData(rawAttestation: any): AttestationData {
  * Fetches the original attestation, its location attestation, and any attestations that reference it
  * @param chainId The chain ID where the attestations exist
  * @param attestationId The UID of the attestation to fetch and find references for
- * @returns A Promise that resolves to an array of AttestationData including all related attestations
+ * @returns A Promise that resolves to an object containing attestations array and location attestation
  */
-async function fetchAttestations(chainId: number, attestationId: string): Promise<AttestationData[]> {
+async function fetchAttestations(chainId: number, attestationId: string): Promise<{
+  attestations: AttestationData[];
+  locationAttestation: AttestationData | null;
+}> {
   const endpoint = getEASGraphQLEndpoint(chainId);
   if (!endpoint) {
     throw new Error(`Unsupported chainId: ${chainId}`);
@@ -122,10 +150,11 @@ async function fetchAttestations(chainId: number, attestationId: string): Promis
   }
 
   // Step 2: If we have a locationUID, fetch that attestation too
+  let locationAttestationData: AttestationData | null = null;
   if (locationUID) {
     const locationAttestation = await fetchLocationAttestation(endpoint, locationUID);
     if (locationAttestation) {
-      // allAttestations.push(locationAttestation);
+      locationAttestationData = convertRawAttestationToData(locationAttestation);
       console.log(`\nFound location attestation: ${locationAttestation.id}`);
     }
   }
@@ -137,7 +166,10 @@ async function fetchAttestations(chainId: number, attestationId: string): Promis
 
   console.log(`\nTotal attestations to process: ${allAttestations.length}`);
 
-  return allAttestations.map((attestation: any) => convertRawAttestationToData(attestation));
+  return {
+    attestations: allAttestations.map((attestation: any) => convertRawAttestationToData(attestation)),
+    locationAttestation: locationAttestationData
+  };
 }
 
 /**
