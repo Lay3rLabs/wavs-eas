@@ -5,7 +5,8 @@ SUDO := $(shell if groups | grep -q docker; then echo ''; else echo 'sudo'; fi)
 
 # Define common variables
 CARGO=cargo
-COIN_MARKET_CAP_ID?=1
+CHAIN_ID?=11155111
+ATTESTATION_UID?="0x916955cb6561766e1dba9c2720bb4c00716ff9d2def8be2cb65ae99e6de2610a"
 COMPONENT_FILENAME?=js_eas_sdk_demo.wasm
 CREDENTIAL?=""
 DOCKER_IMAGE?=ghcr.io/lay3rlabs/wavs:35c96a4
@@ -33,11 +34,13 @@ wasi-build:
 	@./script/build_components.sh $(WASI_BUILD_DIR)
 	@echo "✅ WASI build complete"
 
-## wasi-exec: executing the WAVS wasi component(s) | COMPONENT_FILENAME, COIN_MARKET_CAP_ID
+## wasi-exec: executing the WAVS wasi component(s) | CHAIN_ID, ATTESTATION_UID
 wasi-exec: pull-image
+	@input=`cast abi-encode "f(uint256,bytes32)" $(CHAIN_ID) $(ATTESTATION_UID)`; \
+	echo $$input
 	@$(WAVS_CMD) exec --log-level=info --data /data/.docker --home /data \
 	--component "/data/compiled/$(COMPONENT_FILENAME)" \
-	--input `cast format-bytes32-string $(COIN_MARKET_CAP_ID)`
+	--input `cast abi-encode "f(uint256,string)" $(CHAIN_ID) $(ATTESTATION_UID)`
 
 ## clean: cleaning the project files
 clean: clean-docker

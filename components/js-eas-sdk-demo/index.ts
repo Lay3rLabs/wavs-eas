@@ -1,6 +1,8 @@
 import { TriggerAction, WasmResponse } from "./out/wavs:worker@0.4.0-beta.4";
 import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
 import { ethers } from "ethers";
+import { AbiCoder } from "ethers";
+import { hexlify } from "ethers";
 
 async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   let event = decodeTriggerEvent(triggerAction.data);
@@ -34,10 +36,11 @@ interface AttestationInput {
 }
 
 async function compute(input: Uint8Array): Promise<Uint8Array> {
-  const inputStr = new TextDecoder().decode(input);
-  const { chainId, attestationId }: AttestationInput = JSON.parse(inputStr);
+  const abiCoder = new AbiCoder();
+  const [chainId, attestationId] = abiCoder.decode(["uint256", "string"], input);
 
-  const attestation = await fetchAttestation(chainId, attestationId);
+  const attestation = await fetchAttestation(Number(chainId), attestationId);
+  console.log("\nreceived attestation\n", JSON.stringify(attestation, null, 2));
   const attestationJson = attestationToJson(attestation);
 
   return new TextEncoder().encode(attestationJson);
@@ -72,9 +75,10 @@ async function fetchAttestation(chainId: number, attestationId: string): Promise
     throw new Error(`Unsupported chainId: ${chainId}`);
   }
 
-  const query = `
-    query GetAttestation($uid: String!) {
-      attestation(id: $uid) {
+  console.log("attestationId", attestationId);
+
+  const query = `query GetAttestation($uid: String!) {
+      attestation(where: { id: $uid }) {
         id
         schemaId
         refUID
@@ -86,19 +90,25 @@ async function fetchAttestation(chainId: number, attestationId: string): Promise
         revocable
         data
       }
-    }
-  `;
+    }`;
+
+  const headers = { "Content-Type": "application/json" };
+  const body = JSON.stringify({
+    query,
+    variables: { uid: attestationId },
+  });
+  console.log("\nGraphQL query\n", query);
+  console.log("\nGraphQL request headers:\n", headers);
+  console.log("\nGraphQL request body:\n", body);
 
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query,
-      variables: { uid: attestationId },
-    }),
+    headers,
+    body,
   });
 
   if (!response.ok) {
+    console.log('GraphQL error', response);
     throw new Error(`GraphQL error: ${response.status}`);
   }
 
