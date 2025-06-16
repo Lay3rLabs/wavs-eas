@@ -1,5 +1,5 @@
 [package]
-name = "wavs-eas-attest"
+name = "wavs-eas-compute"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -27,5 +27,5 @@ strip = true
 lto = true
 
 [package.metadata.component]
-package = "component:wavs-eas-attest"
+package = "component:wavs-eas-compute"
 target = "wavs:worker/layer-trigger-world@0.4.0-beta.4"
