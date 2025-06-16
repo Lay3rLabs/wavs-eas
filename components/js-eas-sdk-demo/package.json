@@ -1,5 +1,5 @@
 {
-    "name": "js-evm-price-oracle",
+    "name": "js-eas-sdk-demo",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
@@ -14,5 +14,8 @@
         "@bytecodealliance/jco": "^1.10.2",
         "esbuild": "^0.25.0",
         "ethers": "^6.13.5"
+    },
+    "dependencies": {
+        "@ethereum-attestation-service/eas-sdk": "^2.7.0"
     }
 }

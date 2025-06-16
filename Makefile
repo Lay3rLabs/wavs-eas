@@ -6,7 +6,7 @@ SUDO := $(shell if groups | grep -q docker; then echo ''; else echo 'sudo'; fi)
 # Define common variables
 CARGO=cargo
 COIN_MARKET_CAP_ID?=1
-COMPONENT_FILENAME?=evm_price_oracle.wasm
+COMPONENT_FILENAME?=js_eas_sdk_demo.wasm
 CREDENTIAL?=""
 DOCKER_IMAGE?=ghcr.io/lay3rlabs/wavs:35c96a4
 MIDDLEWARE_DOCKER_IMAGE?=ghcr.io/lay3rlabs/wavs-middleware:79dffa2
@@ -89,7 +89,7 @@ wavs-cli:
 upload-component:
 	@if [ -z "${COMPONENT_FILENAME}" ]; then \
 		echo "❌ Error: COMPONENT_FILENAME is not set"; \
-		echo "💡 Set it with: export COMPONENT_FILENAME=evm_price_oracle.wasm"; \
+		echo "💡 Set it with: export COMPONENT_FILENAME=js_eas_sdk_demo.wasm"; \
 		echo "📖 See 'make help' for more info"; \
 		exit 1; \
 	fi

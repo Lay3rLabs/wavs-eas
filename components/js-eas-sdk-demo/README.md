@@ -23,7 +23,7 @@ make setup
 ```
 
 ```bash
-npm --prefix ./components/js-evm-price-oracle/ install
+npm --prefix ./components/js-eas-sdk-demo/ install
 ```
 
 ## Build Component
@@ -33,7 +33,7 @@ Build all wasi components from the root of the repo. You can also run this comma
 ```bash docci-output-contains="Successfully written"
 # Builds only this component, not all.
 warg reset
-WASI_BUILD_DIR=js-evm-price-oracle make wasi-build
+WASI_BUILD_DIR=js-eas-sdk-demo make wasi-build
 ```
 
 ## Execute Component
@@ -41,11 +41,11 @@ WASI_BUILD_DIR=js-evm-price-oracle make wasi-build
 Run the component with the `wasi-exec` command in the root of the repo
 
 ```bash docci-output-contains="LTC"
-COMPONENT_FILENAME=js_evm_price_oracle.wasm COIN_MARKET_CAP_ID=2 make wasi-exec
+COMPONENT_FILENAME=js_eas_sdk_demo.wasm COIN_MARKET_CAP_ID=2 make wasi-exec
 ```
 
 ---
 
 ## Run main README
 
-Run through the main readme, but use `export COMPONENT_FILENAME=js_evm_price_oracle.wasm` instead of the default.
+Run through the main readme, but use `export COMPONENT_FILENAME=js_eas_sdk_demo.wasm` instead of the default.

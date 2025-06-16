@@ -5,9 +5,9 @@
 A template for developing WebAssembly AVS applications using Rust and Solidity, configured for Windows *WSL*, Linux, and MacOS. The sample oracle service fetches the current price of a cryptocurrency from [CoinMarketCap](https://coinmarketcap.com) and saves it on chain via the operators.
 
 **Languages**
- * [Rust (this example)](./components/evm-price-oracle/)
- * [Go](./components/golang-evm-price-oracle/README.md)
- * [JS / TS](./components/js-evm-price-oracle/README.md)
+ * [Rust (this example)](./components/js-eas-sdk-demo/)
+ * [Go](./components/golang-js-eas-sdk-demo/README.md)
+ * [JS / TS](./components/js-eas-sdk-demo/README.md)
 
 ## System Requirements
 
@@ -167,7 +167,7 @@ Now build the WASI components into the `compiled` output directory.
 
 ```bash
 # Remove `WASI_BUILD_DIR` to build all components.
-WASI_BUILD_DIR=components/evm-price-oracle make wasi-build
+WASI_BUILD_DIR=components/js-eas-sdk-demo make wasi-build
 ```
 
 ## Testing the Price Feed Component Locally
@@ -265,7 +265,7 @@ Deploy the compiled component with the contract information from the previous st
 
 ```bash docci-delay-per-cmd=3
 
-export COMPONENT_FILENAME=evm_price_oracle.wasm
+export COMPONENT_FILENAME=js_eas_sdk_demo.wasm
 export PKG_NAME="evmrustoracle"
 export PKG_VERSION="0.1.0"
 # ** Testnet Setup: https://wa.dev/account/credentials/new -> warg login
@@ -369,4 +369,3 @@ npm run claude-code
 # or with no restrictions (--dangerously-skip-permissions)
 npm run claude-code:unrestricted
 ```
-

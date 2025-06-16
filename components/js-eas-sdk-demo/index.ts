@@ -1,13 +1,13 @@
 import { TriggerAction, WasmResponse } from "./out/wavs:worker@0.4.0-beta.1";
 import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
+import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import { ethers } from "ethers";
 
 async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   let event = decodeTriggerEvent(triggerAction.data);
   let triggerId = event[0].triggerId;
 
   let result = await compute(event[0].data);
-
-
 
   switch (event[1]) {
     case Destination.Cli:
@@ -29,100 +29,81 @@ async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   );
 }
 
+interface AttestationInput {
+  chainId: number;
+  attestationId: string;
+}
+
 async function compute(input: Uint8Array): Promise<Uint8Array> {
-  const num = new TextDecoder().decode(input);
+  const inputStr = new TextDecoder().decode(input);
+  const { chainId, attestationId }: AttestationInput = JSON.parse(inputStr);
 
-  const priceFeed = await fetchCryptoPrice(parseInt(num));
-  const priceJson = priceFeedToJson(priceFeed);
+  const attestation = await fetchAttestation(chainId, attestationId);
+  const attestationJson = attestationToJson(attestation);
 
-  return new TextEncoder().encode(priceJson);
+  return new TextEncoder().encode(attestationJson);
 }
 
-// ======================== CMC ========================
+// ======================== EAS ========================
 
-// Define the types for the CMC API response
-interface Root {
-  status: Status;
-  data: Data;
-}
-
-interface Status {
-  timestamp: string;
-}
-
-interface Data {
-  symbol: string;
-  statistics: Statistics;
-}
-
-interface Statistics {
-  price: number;
-}
-
-// Output structure with essential price information
-interface PriceFeedData {
-  symbol: string;
-  price: number;
-  timestamp: string;
+interface AttestationData {
+  uid: string;
+  schema: string;
+  refUID: string;
+  time: bigint;
+  expirationTime: bigint;
+  revocationTime: bigint;
+  recipient: string;
+  attester: string;
+  revocable: boolean;
+  data: string;
+  chainId: number;
 }
 
 /**
- * Fetches the price of a cryptocurrency from the CoinMarketCap API by their ID.
- * @param id The CoinMarketCap ID of the cryptocurrency
- * @returns A Promise that resolves to PriceFeedData
+ * Fetches an attestation from the EAS API by chain ID and attestation ID
+ * @param chainId The chain ID where the attestation exists
+ * @param attestationId The UID of the attestation
+ * @returns A Promise that resolves to AttestationData
  */
-async function fetchCryptoPrice(id: number): Promise<PriceFeedData> {
-  // Prepare the URL
-  const url = `https://api.coinmarketcap.com/data-api/v3/cryptocurrency/detail?id=${id}&range=1h`;
-
-  // Set the headers
-  const currentTime = Math.floor(Date.now() / 1000);
-  const headers = {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-    "User-Agent":
-      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
-    Cookie: `myrandom_cookie=${currentTime}`,
-  };
+async function fetchAttestation(chainId: number, attestationId: string): Promise<AttestationData> {
+  // Initialize EAS SDK
+  const eas = new EAS("https://easscan.org/graphql");
 
   try {
-    // Make the request
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-    });
+    // Fetch the attestation
+    const attestation = await eas.getAttestation(attestationId);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+    if (!attestation) {
+      throw new Error(`Attestation not found: ${attestationId}`);
     }
 
-    // Parse the JSON response
-    const root: Root = await response.json();
-
-    // round to 2 decimal places on root.data.statistics.price
-    let price = Math.round(root.data.statistics.price * 100) / 100;
-
-    // timestamp is 2025-04-30T19:59:44.161Z, becomes 2025-04-30T19:59:44
-    let timestamp = root.status.timestamp.split(".")[0];
-
     return {
-      symbol: root.data.symbol,
-      price: price,
-      timestamp: timestamp,
+      uid: attestation.uid,
+      schema: attestation.schema,
+      refUID: attestation.refUID,
+      time: attestation.time,
+      expirationTime: attestation.expirationTime,
+      revocationTime: attestation.revocationTime,
+      recipient: attestation.recipient,
+      attester: attestation.attester,
+      revocable: attestation.revocable,
+      data: attestation.data,
+      chainId: chainId
     };
   } catch (error) {
     throw new Error(
-      `Failed to fetch crypto price: ${
+      `Failed to fetch attestation: ${
         error instanceof Error ? error.message : String(error)
       }`
     );
   }
 }
 
-// Example of how to convert the PriceFeedData to JSON
-function priceFeedToJson(priceFeed: PriceFeedData): string {
+// Convert AttestationData to JSON
+function attestationToJson(attestation: AttestationData): string {
   try {
-    return JSON.stringify(priceFeed);
+    return JSON.stringify(attestation);
   } catch (error) {
     throw new Error(
       `Failed to marshal JSON: ${

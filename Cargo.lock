@@ -1181,7 +1181,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "evm-price-oracle"
+name = "js-eas-sdk-demo"
 version = "0.4.0"
 dependencies = [
  "alloy-sol-macro",

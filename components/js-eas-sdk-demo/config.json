@@ -1,7 +1,7 @@
 {
     "__tool": "github.com/reecepbcups/docci",
     "paths": [
-      "components/js-evm-price-oracle/README.md"
+      "components/js-eas-sdk-demo/README.md"
     ],
     "env_vars": {},
     "pre_cmds": [],

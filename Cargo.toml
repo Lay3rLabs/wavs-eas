@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "components/evm-price-oracle",
+    "components/js-eas-sdk-demo",
 ]
 resolver = "2"
 
