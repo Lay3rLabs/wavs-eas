@@ -6,7 +6,7 @@ SUDO := $(shell if groups | grep -q docker; then echo ''; else echo 'sudo'; fi)
 # Define common variables
 CARGO=cargo
 CHAIN_ID?=11155111
-ATTESTATION_UID?="0x916955cb6561766e1dba9c2720bb4c00716ff9d2def8be2cb65ae99e6de2610a"
+ATTESTATION_UID?="0xda7b05faa2bf449c54a6bf01e2e7036047f57cd9e1fa7ce5f857e82182834b1e"
 COMPONENT_FILENAME?=js_eas_sdk_demo.wasm
 CREDENTIAL?=""
 DOCKER_IMAGE?=ghcr.io/lay3rlabs/wavs:35c96a4

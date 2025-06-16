@@ -78,7 +78,7 @@ async function fetchAttestation(chainId: number, attestationId: string): Promise
   console.log("attestationId", attestationId);
 
   const query = `query GetAttestation($uid: String!) {
-      attestation(where: { id: $uid }) {
+      attestations(where: { refUID: {equals: $uid} }) {
         id
         schemaId
         refUID
@@ -113,11 +113,11 @@ async function fetchAttestation(chainId: number, attestationId: string): Promise
   }
 
   const { data } = await response.json();
-  if (!data || !data.attestation) {
+  if (!data || !data.attestations) {
     throw new Error(`Attestation not found: ${attestationId}`);
   }
 
-  const att = data.attestation;
+  const att = data.attestations[0];
   return {
     uid: att.id,
     schemaId: att.schemaId,
