@@ -1,4 +1,6 @@
-# Typescript Ethereum Price Oracle
+# Typescript EAS SDK Demo
+
+TODO update this example to explore using EAS SDK.
 
 A WAVS component that fetches the price of a crypto currency from CoinMarketCap and returns it to the Ethereum contract, in Typescript.
 
