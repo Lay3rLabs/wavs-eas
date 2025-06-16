@@ -1,4 +1,4 @@
-import { TriggerAction, WasmResponse } from "./out/wavs:worker@0.4.0-beta.1";
+import { TriggerAction, WasmResponse } from "./out/wavs:worker@0.4.0-beta.4";
 import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
 import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
