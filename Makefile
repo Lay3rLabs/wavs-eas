@@ -36,8 +36,6 @@ wasi-build:
 
 ## wasi-exec: executing the WAVS wasi component(s) | CHAIN_ID, ATTESTATION_UID
 wasi-exec: pull-image
-	@input=`cast abi-encode "f(uint256,bytes32)" $(CHAIN_ID) $(ATTESTATION_UID)`; \
-	echo $$input
 	@$(WAVS_CMD) exec --log-level=info --data /data/.docker --home /data \
 	--component "/data/compiled/$(COMPONENT_FILENAME)" \
 	--input `cast abi-encode "f(uint256,string)" $(CHAIN_ID) $(ATTESTATION_UID)`
