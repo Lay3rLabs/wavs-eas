@@ -3,6 +3,7 @@ import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
 import { AbiCoder } from "ethers";
 import booleanContains from "@turf/boolean-contains";
 import { point, polygon } from "@turf/helpers";
+import { AttestationData } from "./types";
 
 async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   let event = decodeTriggerEvent(triggerAction.data);
@@ -77,12 +78,7 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
 
 // ======================== EAS GraphQL ========================
 
-interface AttestationData {
-  uid: string;
-  schemaId: string;
-  refUID: string;
-  data: string;
-}
+
 
 /**
  * Converts a raw attestation object from GraphQL response to AttestationData format
