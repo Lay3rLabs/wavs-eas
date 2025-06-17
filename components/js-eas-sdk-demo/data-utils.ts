@@ -32,36 +32,34 @@ export function extractDecodedAttestationData(decodedData: any[]): Record<string
 }
 
 /**
- * Extracts the locationUID field from the decoded attestation data
- * @param decodedData The decoded attestation data array
- * @returns The locationUID value as a string, or null if not found
+ * Extracts and parses location data from an AttestationData object
+ * @param attestationData The attestation data object
+ * @returns Parsed location data object
  */
-export function getLocationUID(decodedData: any[]): string | null {
-  try {
-    const fields = extractDecodedAttestationData(decodedData);
-    return fields.locationUID || null;
-  } catch (error) {
-    console.log(`Warning: Could not extract locationUID: ${error}`);
-    return null;
-  }
+export function extractLocationFromAttestation(attestationData: { data: string }): any {
+  const attestationJson = JSON.parse(attestationData.data);
+  const decodedData = extractDecodedAttestationData(attestationJson);
+  return JSON.parse(decodedData.location);
 }
 
 /**
- * Extracts the location field from the decoded attestation data
- * @param decodedData The decoded attestation data array
- * @returns The location value as a parsed JSON object
+ * Extracts a specific field from an AttestationData object
+ * @param attestationData The attestation data object
+ * @param fieldName The name of the field to extract
+ * @returns The field value or undefined if not found
  */
-export function getLocation(decodedData: any[]): any {
-  const fields = extractDecodedAttestationData(decodedData);
+export function extractFieldFromAttestation(attestationData: { data: string }, fieldName: string): any {
+  const attestationJson = JSON.parse(attestationData.data);
+  const decodedData = extractDecodedAttestationData(attestationJson);
+  return decodedData[fieldName];
+}
 
-  if (!fields.location) {
-    throw new Error("No location field found in attestation data");
-  }
-
-  try {
-    // Parse the location value which is a JSON string containing coordinates
-    return JSON.parse(fields.location);
-  } catch (error) {
-    throw new Error(`Failed to parse location JSON: ${error instanceof Error ? error.message : String(error)}`);
-  }
+/**
+ * Extracts decoded data from a raw attestation data string
+ * @param rawData The raw attestation data string (JSON)
+ * @returns Decoded and flattened data object
+ */
+export function extractDecodedDataFromRaw(rawData: string): Record<string, any> {
+  const attestationJson = JSON.parse(rawData);
+  return extractDecodedAttestationData(attestationJson);
 }

@@ -1,5 +1,5 @@
 import { AttestationData } from "./types";
-import { getLocationUID } from "./data-utils";
+import { extractDecodedDataFromRaw } from "./data-utils";
 
 /**
  * Converts a raw attestation object from GraphQL response to AttestationData format
@@ -62,8 +62,8 @@ export class EASGraphQLClient {
     if (initialData.attestation) {
       // Extract locationUID from decodedDataJson
       try {
-        const decodedData = JSON.parse(initialData.attestation.decodedDataJson);
-        locationUID = getLocationUID(decodedData);
+        const decodedData = extractDecodedDataFromRaw(initialData.attestation.decodedDataJson);
+        locationUID = decodedData.locationUID;
         console.log(`\nFound original attestation: ${initialData.attestation.id} (used for locationUID extraction only)`);
         if (locationUID) {
           console.log(`\nExtracted locationUID: ${locationUID}`);
@@ -86,6 +86,8 @@ export class EASGraphQLClient {
       if (locationAttestation) {
         locationAttestationData = convertRawAttestationToData(locationAttestation);
         console.log(`\nFound location attestation: ${locationAttestation.id}`);
+      } else {
+        console.log(`\nNo location attestation found for locationUID: ${locationUID}`);
       }
     }
 

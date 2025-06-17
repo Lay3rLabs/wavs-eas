@@ -1,7 +1,7 @@
 import booleanContains from "@turf/boolean-contains";
 import { point, polygon } from "@turf/helpers";
 import { AttestationData, ContainmentResult } from "./types";
-import { getLocation } from "./data-utils";
+import { extractLocationFromAttestation } from "./data-utils";
 
 /**
  * Tests polygon containment for a set of attestations against a location boundary
@@ -14,18 +14,16 @@ export function testPolygonContainment(
   locationAttestation: AttestationData
 ): ContainmentResult[] {
   // Extract polygon from location attestation
-  const locationAttestationJson = JSON.parse(locationAttestation.data);
-  const polygonData = getLocation(locationAttestationJson);
+  const polygonData = extractLocationFromAttestation(locationAttestation);
   console.log(`\npolygon data from location attestation\n`, JSON.stringify(polygonData, null, 2));
 
   // Create turf polygon from the location attestation
   const turfPolygon = polygon(polygonData.coordinates);
 
   const containmentResults = attestations.map((attestation, index) => {
-    const attestationJson = JSON.parse(attestation.data);
-    console.log(`\ndecoded attestation ${index + 1} data\n`, JSON.stringify(attestationJson, null, 2));
+    console.log(`\ndecoded attestation ${index + 1} data\n`, JSON.stringify(JSON.parse(attestation.data), null, 2));
 
-    const locationData = getLocation(attestationJson);
+    const locationData = extractLocationFromAttestation(attestation);
     console.log(`\nextracted location from attestation ${index + 1}\n`, JSON.stringify(locationData, null, 2));
 
     // Create turf point from the attestation location
