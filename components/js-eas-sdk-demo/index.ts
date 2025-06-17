@@ -3,8 +3,8 @@ import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
 import { AbiCoder } from "ethers";
 import booleanContains from "@turf/boolean-contains";
 import { point, polygon } from "@turf/helpers";
-import { AttestationData } from "./types";
-import { getLocationUID, getLocation } from "./data-utils";
+import { getLocation } from "./data-utils";
+import { EASGraphQLClient } from "./eas-client";
 
 async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   let event = decodeTriggerEvent(triggerAction.data);
@@ -36,7 +36,8 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
   const abiCoder = new AbiCoder();
   const [chainId, attestationId] = abiCoder.decode(["uint256", "string"], input);
 
-  const { attestations, locationAttestation } = await fetchAttestations(Number(chainId), attestationId);
+  const client = new EASGraphQLClient();
+  const { attestations, locationAttestation } = await client.fetchAttestations(Number(chainId), attestationId);
   console.log(`\nreceived ${attestations.length} attestations\n`);
 
   if (!locationAttestation) {
@@ -75,182 +76,6 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
   console.log(`\ncontainment test results (${containmentResults.length} total)\n`, JSON.stringify(containmentResults, null, 2));
 
   return new TextEncoder().encode(JSON.stringify(containmentResults));
-}
-
-// ======================== EAS GraphQL ========================
-
-/**
- * Converts a raw attestation object from GraphQL response to AttestationData format
- * @param rawAttestation The raw attestation object from GraphQL
- * @returns AttestationData object
- */
-function convertRawAttestationToData(rawAttestation: any): AttestationData {
-  return {
-    uid: rawAttestation.id,
-    schemaId: rawAttestation.schemaId,
-    refUID: rawAttestation.refUID,
-    data: rawAttestation.decodedDataJson,
-  };
-}
-
-/**
- * Fetches the original attestation, its location attestation, and any attestations that reference it
- * @param chainId The chain ID where the attestations exist
- * @param attestationId The UID of the attestation to fetch and find references for
- * @returns A Promise that resolves to an object containing attestations array and location attestation
- */
-async function fetchAttestations(chainId: number, attestationId: string): Promise<{
-  attestations: AttestationData[];
-  locationAttestation: AttestationData | null;
-}> {
-  const endpoint = getEASGraphQLEndpoint(chainId);
-  if (!endpoint) {
-    throw new Error(`Unsupported chainId: ${chainId}`);
-  }
-
-  console.log("attestationId", attestationId);
-
-  // Step 1: Fetch the original attestation and any that reference it
-  const initialData = await fetchInitialAttestations(endpoint, attestationId);
-
-  const allAttestations: any[] = [];
-  let locationUID: string | null = null;
-
-    // Process the original attestation (only for extracting locationUID, not for final results)
-  if (initialData.attestation) {
-    // Extract locationUID from decodedDataJson
-    try {
-      const decodedData = JSON.parse(initialData.attestation.decodedDataJson);
-      locationUID = getLocationUID(decodedData);
-      console.log(`\nFound original attestation: ${initialData.attestation.id} (used for locationUID extraction only)`);
-      if (locationUID) {
-        console.log(`\nExtracted locationUID: ${locationUID}`);
-      }
-    } catch (error) {
-      console.log(`\nWarning: Could not parse decodedDataJson for original attestation: ${error}`);
-    }
-  }
-
-  // Add referencing attestations
-  if (initialData.attestations && initialData.attestations.length > 0) {
-    allAttestations.push(...initialData.attestations);
-    console.log(`\nFound ${initialData.attestations.length} attestations referencing: ${attestationId}`);
-  }
-
-  // Step 2: If we have a locationUID, fetch that attestation too
-  let locationAttestationData: AttestationData | null = null;
-  if (locationUID) {
-    const locationAttestation = await fetchLocationAttestation(endpoint, locationUID);
-    if (locationAttestation) {
-      locationAttestationData = convertRawAttestationToData(locationAttestation);
-      console.log(`\nFound location attestation: ${locationAttestation.id}`);
-    }
-  }
-
-  // Ensure we have at least one attestation
-  if (allAttestations.length === 0) {
-    throw new Error(`No attestations found for attestationId: ${attestationId}`);
-  }
-
-  console.log(`\nTotal attestations to process: ${allAttestations.length}`);
-
-  return {
-    attestations: allAttestations.map((attestation: any) => convertRawAttestationToData(attestation)),
-    locationAttestation: locationAttestationData
-  };
-}
-
-/**
- * Generic function to execute GraphQL queries
- * @param endpoint The GraphQL endpoint URL
- * @param query The GraphQL query string
- * @param variables Variables for the query
- * @param throwOnError Whether to throw on HTTP errors or return null
- * @returns The data from the GraphQL response or null if error and throwOnError is false
- */
-async function executeGraphQLQuery(
-  endpoint: string,
-  query: string,
-  variables: Record<string, any>,
-  throwOnError: boolean = true
-): Promise<any> {
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  if (!response.ok) {
-    const errorMessage = `GraphQL error: ${response.status}`;
-    if (throwOnError) {
-      console.log('GraphQL error', response);
-      throw new Error(errorMessage);
-    } else {
-      console.log(`Warning: ${errorMessage}`);
-      return null;
-    }
-  }
-
-  const { data } = await response.json();
-  if (!data && throwOnError) {
-    throw new Error(`No data returned from GraphQL query`);
-  }
-
-  return data;
-}
-
-/**
- * Fetches the initial attestation and any that reference it
- */
-async function fetchInitialAttestations(endpoint: string, attestationId: string): Promise<any> {
-  const query = `query GetAttestation($uid: String!) {
-      attestation(where: { id: $uid }) {
-        id
-        schemaId
-        refUID
-        decodedDataJson
-      }
-
-      attestations(where: { refUID: {equals: $uid} }) {
-        id
-        schemaId
-        refUID
-        decodedDataJson
-      }
-    }`;
-
-  return executeGraphQLQuery(endpoint, query, { uid: attestationId }, true);
-}
-
-/**
- * Fetches a location attestation by its UID
- */
-async function fetchLocationAttestation(endpoint: string, locationUID: string): Promise<any | null> {
-  const query = `query GetLocationAttestation($uid: String!) {
-      attestation(where: { id: $uid }) {
-        id
-        schemaId
-        refUID
-        decodedDataJson
-      }
-    }`;
-
-  const data = await executeGraphQLQuery(endpoint, query, { uid: locationUID }, false);
-  return data?.attestation || null;
-}
-
-function getEASGraphQLEndpoint(chainId: number): string | null {
-  // Add more chain IDs and endpoints as needed
-  switch (chainId) {
-    case 1:
-      return "https://mainnet.easscan.org/graphql";
-    case 10:
-      return "https://optimism.easscan.org/graphql";
-    case 11155111:
-      return "https://sepolia.easscan.org/graphql";
-    default:
-      return null;
-  }
 }
 
 export { run };
