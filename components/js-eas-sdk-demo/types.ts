@@ -5,3 +5,8 @@ export interface AttestationData {
   data: string;
 }
 
+export interface ContainmentResult {
+  attestationId: string;
+  location: any;
+  isContainedInPolygon: boolean;
+}
