@@ -1,8 +1,6 @@
 import { TriggerAction, WasmResponse } from "./out/wavs:worker@0.4.0-beta.4";
 import { decodeTriggerEvent, encodeOutput, Destination } from "./trigger";
-import { ethers } from "ethers";
 import { AbiCoder } from "ethers";
-import { hexlify } from "ethers";
 import booleanContains from "@turf/boolean-contains";
 import { point, polygon } from "@turf/helpers";
 
@@ -30,11 +28,6 @@ async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   throw new Error(
     "Unknown destination: " + event[1] + " for trigger ID: " + triggerId
   );
-}
-
-interface AttestationInput {
-  chainId: number;
-  attestationId: string;
 }
 
 async function compute(input: Uint8Array): Promise<Uint8Array> {
@@ -262,19 +255,6 @@ function getEASGraphQLEndpoint(chainId: number): string | null {
       return "https://sepolia.easscan.org/graphql";
     default:
       return null;
-  }
-}
-
-// Convert AttestationData to JSON
-function attestationToJson(attestation: AttestationData): string {
-  try {
-    return JSON.stringify(attestation);
-  } catch (error) {
-    throw new Error(
-      `Failed to marshal JSON: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
   }
 }
 
