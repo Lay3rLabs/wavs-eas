@@ -4,6 +4,7 @@ import { AbiCoder } from "ethers";
 import booleanContains from "@turf/boolean-contains";
 import { point, polygon } from "@turf/helpers";
 import { AttestationData } from "./types";
+import { getLocationUID, getLocation } from "./data-utils";
 
 async function run(triggerAction: TriggerAction): Promise<WasmResponse> {
   let event = decodeTriggerEvent(triggerAction.data);
@@ -44,7 +45,7 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
 
   // Extract polygon from location attestation
   const locationAttestationJson = JSON.parse(locationAttestation.data);
-  const polygonData = extractLocationFromAttestation(locationAttestationJson);
+  const polygonData = getLocation(locationAttestationJson);
   console.log(`\npolygon data from location attestation\n`, JSON.stringify(polygonData, null, 2));
 
   // Create turf polygon from the location attestation
@@ -54,7 +55,7 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
     const attestationJson = JSON.parse(attestation.data);
     console.log(`\ndecoded attestation ${index + 1} data\n`, JSON.stringify(attestationJson, null, 2));
 
-    const locationData = extractLocationFromAttestation(attestationJson);
+    const locationData = getLocation(attestationJson);
     console.log(`\nextracted location from attestation ${index + 1}\n`, JSON.stringify(locationData, null, 2));
 
     // Create turf point from the attestation location
@@ -77,8 +78,6 @@ async function compute(input: Uint8Array): Promise<Uint8Array> {
 }
 
 // ======================== EAS GraphQL ========================
-
-
 
 /**
  * Converts a raw attestation object from GraphQL response to AttestationData format
@@ -122,7 +121,7 @@ async function fetchAttestations(chainId: number, attestationId: string): Promis
     // Extract locationUID from decodedDataJson
     try {
       const decodedData = JSON.parse(initialData.attestation.decodedDataJson);
-      locationUID = extractLocationUIDFromAttestation(decodedData);
+      locationUID = getLocationUID(decodedData);
       console.log(`\nFound original attestation: ${initialData.attestation.id} (used for locationUID extraction only)`);
       if (locationUID) {
         console.log(`\nExtracted locationUID: ${locationUID}`);
@@ -251,74 +250,6 @@ function getEASGraphQLEndpoint(chainId: number): string | null {
       return "https://sepolia.easscan.org/graphql";
     default:
       return null;
-  }
-}
-
-/**
- * Converts decoded attestation data array into a flat key-value object
- * @param decodedData The decoded attestation data array
- * @returns An object with field names as keys and their values
- */
-function extractAllFieldsFromAttestation(decodedData: any[]): Record<string, any> {
-  if (!Array.isArray(decodedData)) {
-    throw new Error("Decoded attestation data is not an array");
-  }
-
-  const fields: Record<string, any> = {};
-
-  for (const field of decodedData) {
-    if (!field.name || !field.value) {
-      console.log(`Warning: Skipping malformed field:`, field);
-      continue;
-    }
-
-    // Extract the actual value, handling different value structures
-    let value = field.value.value;
-
-    // Handle different data types
-    if (field.value.type === "uint256" && value?.type === "BigNumber") {
-      // Convert BigNumber to regular number
-      value = parseInt(value.hex, 16);
-    }
-
-    fields[field.name] = value;
-  }
-
-  return fields;
-}
-
-/**
- * Extracts the locationUID field from the decoded attestation data
- * @param decodedData The decoded attestation data array
- * @returns The locationUID value as a string, or null if not found
- */
-function extractLocationUIDFromAttestation(decodedData: any[]): string | null {
-  try {
-    const fields = extractAllFieldsFromAttestation(decodedData);
-    return fields.locationUID || null;
-  } catch (error) {
-    console.log(`Warning: Could not extract locationUID: ${error}`);
-    return null;
-  }
-}
-
-/**
- * Extracts the location field from the decoded attestation data
- * @param decodedData The decoded attestation data array
- * @returns The location value as a parsed JSON object
- */
-function extractLocationFromAttestation(decodedData: any[]): any {
-  const fields = extractAllFieldsFromAttestation(decodedData);
-
-  if (!fields.location) {
-    throw new Error("No location field found in attestation data");
-  }
-
-  try {
-    // Parse the location value which is a JSON string containing coordinates
-    return JSON.parse(fields.location);
-  } catch (error) {
-    throw new Error(`Failed to parse location JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
