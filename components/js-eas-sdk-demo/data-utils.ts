@@ -3,7 +3,7 @@
  * @param decodedData The decoded attestation data array
  * @returns An object with field names as keys and their values
  */
-export function extractAllFieldsFromAttestation(decodedData: any[]): Record<string, any> {
+export function extractDecodedAttestationData(decodedData: any[]): Record<string, any> {
   if (!Array.isArray(decodedData)) {
     throw new Error("Decoded attestation data is not an array");
   }
@@ -38,7 +38,7 @@ export function extractAllFieldsFromAttestation(decodedData: any[]): Record<stri
  */
 export function getLocationUID(decodedData: any[]): string | null {
   try {
-    const fields = extractAllFieldsFromAttestation(decodedData);
+    const fields = extractDecodedAttestationData(decodedData);
     return fields.locationUID || null;
   } catch (error) {
     console.log(`Warning: Could not extract locationUID: ${error}`);
@@ -52,7 +52,7 @@ export function getLocationUID(decodedData: any[]): string | null {
  * @returns The location value as a parsed JSON object
  */
 export function getLocation(decodedData: any[]): any {
-  const fields = extractAllFieldsFromAttestation(decodedData);
+  const fields = extractDecodedAttestationData(decodedData);
 
   if (!fields.location) {
     throw new Error("No location field found in attestation data");
