@@ -132,7 +132,7 @@ warg key new
 ```bash docci-ignore
 # if foundry is not installed:
 # `curl -L https://foundry.paradigm.xyz | bash && $HOME/.foundry/bin/foundryup`
-forge init --template Lay3rLabs/wavs-foundry-template my-wavs --branch 0.4
+forge init --template Lay3rLabs/wavs-foundry-template my-wavs --branch main
 ```
 
 > \[!TIP]
@@ -168,21 +168,16 @@ Now build the WASI components into the `compiled` output directory.
 > `brew uninstall rust` & install it from <https://rustup.rs>
 
 ```bash
-# Remove `WASI_BUILD_DIR` to build all components.
-WASI_BUILD_DIR=components/evm-price-oracle make wasi-build
+make wasi-build
 ```
 
 ## Testing the Price Feed Component Locally
 
 How to test the component locally for business logic validation before on-chain deployment. An ID of 1 for the oracle component is Bitcoin.
 
+TODO! Update this to actually work with our components
 ```bash
-# Rust & Typescript components
-INPUT_DATA="1" COMPONENT_FILENAME=evm_price_oracle.wasm make wasi-exec
-INPUT_DATA="1" COMPONENT_FILENAME=js_evm_price_oracle.wasm make wasi-exec
-
-# Golang
-INPUT_DATA="1" COMPONENT_FILENAME=golang_evm_price_oracle.wasm make wasi-exec-fixed
+COIN_MARKET_CAP_ID=1 make wasi-exec
 ```
 
 Expected output:
@@ -216,7 +211,7 @@ Result (utf8):
 
 ## Start Environment
 
-Start an Ethereum node (anvil), the WAVS service, and deploy [EigenLayer](https://www.eigenlayer.xyz/) contracts to the local network.
+Start an ethereum node (anvil), the WAVS service, and deploy [eigenlayer](https://www.eigenlayer.xyz/) contracts to the local network.
 
 ### Enable Telemetry (optional)
 
@@ -272,6 +267,95 @@ export AGGREGATOR_URL=http://127.0.0.1:8001
 bash ./script/deploy-script.sh
 ```
 
+## Create Deployer, upload Eigenlayer
+
+These sections can be run on the **same** machine, or separate for testnet environments. Run the following steps on the deployer/aggregator machine.
+
+```bash
+# local: create deployer & auto fund. testnet: create & iterate check balance
+bash ./script/create-deployer.sh
+
+## Deploy Eigenlayer from Deployer
+COMMAND=deploy make wavs-middleware
+```
+
+## Deploy Service Contracts
+
+`WAVS_SERVICE_MANAGER_ADDRESS` is the address of the Eigenlayer service manager contract. It was deployed in the previous step. Then you deploy the trigger and submission contracts which depends on the service manager. The service manager will verify that a submission is valid (from an authorized operator) before saving it to the blockchain. The trigger contract is any arbitrary contract that emits some event that WAVS will watch for. Yes, this can be on another chain (e.g. an L2) and then the submission contract on the L1 *(Ethereum for now because that is where Eigenlayer is deployed)*.
+
+```bash docci-delay-per-cmd=2
+source script/deploy-contracts.sh
+```
+
+## Deploy Service
+
+Deploy the compiled component with the contract information from the previous steps. Review the [makefile](./Makefile) for more details and configuration options.`TRIGGER_EVENT` is the event that the trigger contract emits and WAVS watches for. By altering `SERVICE_TRIGGER_ADDR` you can watch events for contracts others have deployed.
+
+```bash docci-delay-per-cmd=3
+export COMPONENT_FILENAME=wavs_eas_attest.wasm
+export PKG_NAME="easattest"
+export PKG_VERSION="0.1.0"
+# ** Testnet Setup: https://wa.dev/account/credentials/new -> warg login
+source script/upload-to-wasi-registry.sh || true
+
+# Testnet: set values (default: local if not set)
+# export TRIGGER_CHAIN=holesky
+# export SUBMIT_CHAIN=holesky
+
+# Package not found with wa.dev? -- make sure it is public
+export AGGREGATOR_URL=http://127.0.0.1:8001
+REGISTRY=${REGISTRY} source ./script/build-service.sh
+```
+
+## Upload to IPFS
+
+```bash
+# Upload service.json to IPFS
+SERVICE_FILE=.docker/service.json source ./script/ipfs-upload.sh
+```
+
+## Start Aggregator
+
+**TESTNET** You can move the aggregator it to its own machine for testnet deployments, it's easiest to run this on the deployer machine first. If moved, ensure you set the env variables correctly (copied and pasted from the previous steps on the other machine).
+
+```bash
+bash ./script/create-aggregator.sh 1
+
+IPFS_GATEWAY=${IPFS_GATEWAY} bash ./infra/aggregator-1/start.sh
+
+wget -q --header="Content-Type: application/json" --post-data="{\"uri\": \"${IPFS_URI}\"}" ${AGGREGATOR_URL}/register-service -O -
+```
+
+## Start WAVS
+
+**TESTNET** The WAVS service should be run in its own machine (creation, start, and opt-in). If moved, make sure you set the env variables correctly (copy pasted from the previous steps on the other machine).
+
+```bash
+bash ./script/create-operator.sh 1
+
+IPFS_GATEWAY=${IPFS_GATEWAY} bash ./infra/wavs-1/start.sh
+
+# Deploy the service JSON to WAVS so it now watches and submits.
+# 'opt in' for WAVS to watch (this is before we register to Eigenlayer)
+WAVS_ENDPOINT=http://127.0.0.1:8000 SERVICE_URL=${IPFS_URI} IPFS_GATEWAY=${IPFS_GATEWAY} make deploy-service
+```
+
+## Register service specific operator
+
+Making test mnemonic: `cast wallet new-mnemonic --json | jq -r .mnemonic`
+
+Each service gets their own key path (hd_path). The first service starts at 1 and increments from there. Get the service ID
+
+```bash
+SERVICE_INDEX=0 source ./script/avs-signing-key.sh
+
+# TESTNET: set WAVS_SERVICE_MANAGER_ADDRESS
+export WAVS_SERVICE_MANAGER_ADDRESS=$(jq -r .addresses.WavsServiceManager ./.nodes/avs_deploy.json)
+COMMAND="register ${OPERATOR_PRIVATE_KEY} ${AVS_SIGNING_ADDRESS} 0.001ether" make wavs-middleware
+
+# Verify registration
+COMMAND="list_operator" PAST_BLOCKS=500 make wavs-middleware
+```
 
 ## Trigger the Service
 

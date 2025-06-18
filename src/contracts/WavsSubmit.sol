@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.27;
 
 import {IWavsServiceManager} from "@wavs/interfaces/IWavsServiceManager.sol";
 import {IWavsServiceHandler} from "@wavs/interfaces/IWavsServiceHandler.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {SimpleTrigger} from "contracts/WavsTrigger.sol";
@@ -20,6 +20,9 @@ contract TriggerTest is Test {
 
         assertEq(trigger.creator, address(this));
         assertEq(trigger.data, "data1");
-        assertEq(ITypes.TriggerId.unwrap(trigger.triggerId), ITypes.TriggerId.unwrap(triggerId));
+        assertEq(
+            ITypes.TriggerId.unwrap(trigger.triggerId),
+            ITypes.TriggerId.unwrap(triggerId)
+        );
     }
 }
