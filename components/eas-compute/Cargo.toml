@@ -15,16 +15,14 @@ alloy-sol-macro = { workspace = true }
 wstd = { workspace = true }
 alloy-sol-types = { workspace = true }
 anyhow = { workspace = true }
+alloy-network = { workspace = true }
+alloy-provider = { workspace = true }
+alloy-rpc-types = { workspace = true }
+hex = "0.4.3"
 
 [lib]
 crate-type = ["cdylib"]
 
-[profile.release]
-codegen-units = 1
-opt-level = "s"
-debug = false
-strip = true
-lto = true
 
 [package.metadata.component]
 package = "component:wavs-eas-compute"

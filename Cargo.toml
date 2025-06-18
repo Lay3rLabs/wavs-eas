@@ -1,5 +1,5 @@
 [workspace]
-members = ["components/js-eas-sdk-demo", "components/eas-attest"]
+members = ["components/eas-attest", "components/eas-compute"]
 
 resolver = "2"
 
@@ -9,7 +9,7 @@ version = "0.4.0"
 license = "MIT"
 authors = ["Lay3r Labs Team"]
 repository = "https://github.com/Lay3rLabs/wavs"
-rust-version = "1.80.0"
+rust-version = "1.85.0"
 
 [workspace.dependencies]
 # WASI
@@ -27,3 +27,19 @@ anyhow = "1.0.98"
 ## Alloy
 alloy-sol-macro = { version = "1.0.0", features = ["json"] }
 alloy-sol-types = "1.0.0"
+alloy-dyn-abi = "1.0.0"
+alloy-json-abi = "1.0.0"
+alloy-primitives = "1.0.0"
+alloy-network = "0.15.10"
+alloy-provider = { version = "0.15.10", default-features = false, features = [
+    "rpc-api",
+] }
+alloy-rpc-types = "0.15.10"
+alloy-transport-http = { version = "0.15.10", default-features = false }
+
+[profile.release]
+codegen-units = 1
+opt-level = "s"
+debug = false
+strip = true
+lto = true

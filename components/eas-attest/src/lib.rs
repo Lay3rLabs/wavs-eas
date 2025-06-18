@@ -9,16 +9,16 @@ export!(Component with_types_in bindings);
 
 impl Guest for Component {
     /// Generic EAS attestation component.
-    /// 
+    ///
     /// This component receives attestation input data and creates a new EAS attestation.
     /// It can handle various input formats and automatically creates properly formatted
     /// attestation data for submission to the EAS contract.
-    /// 
+    ///
     /// Input formats supported:
     /// 1. JSON with schema, recipient, and data fields
     /// 2. Raw bytes data (will use default schema and recipient)
     /// 3. Structured attestation request data
-    /// 
+    ///
     /// The component will:
     /// 1. Parse the input attestation data
     /// 2. Validate the required fields
@@ -30,11 +30,13 @@ impl Guest for Component {
 
         // Parse the input attestation data
         let attestation_input = parse_attestation_input(&req)?;
-        
-        println!("Creating attestation: schema={}, recipient={}, data_len={}", 
-                hex::encode(&attestation_input.schema),
-                hex::encode(&attestation_input.recipient), 
-                attestation_input.data.len());
+
+        println!(
+            "Creating attestation: schema={}, recipient={}, data_len={}",
+            hex::encode(&attestation_input.schema),
+            hex::encode(&attestation_input.recipient),
+            attestation_input.data.len()
+        );
 
         // Create the attestation response
         let attestation_response = AttestationResponse {
@@ -52,15 +54,17 @@ impl Guest for Component {
 
         let output = match dest {
             Destination::Ethereum => Some(encode_trigger_output(trigger_id, &encoded_response)),
-            Destination::CliOutput => Some(WasmResponse { payload: encoded_response.into(), ordering: None }),
+            Destination::CliOutput => {
+                Some(WasmResponse { payload: encoded_response.into(), ordering: None })
+            }
         };
-        
+
         Ok(output)
     }
 }
 
 /// Parses input data into attestation input format
-/// 
+///
 /// Supports multiple input formats:
 /// 1. JSON string with structured attestation data
 /// 2. Raw bytes data (uses defaults for schema/recipient)
@@ -87,7 +91,8 @@ fn parse_attestation_input(data: &[u8]) -> Result<AttestationInput, String> {
     }
 
     // Try to decode as ABI-encoded attestation data
-    if data.len() >= 84 { // Minimum: 32 bytes schema + 20 bytes recipient + 32 bytes for data length
+    if data.len() >= 84 {
+        // Minimum: 32 bytes schema + 20 bytes recipient + 32 bytes for data length
         if let Ok(input) = try_decode_abi_attestation(data) {
             return Ok(input);
         }
@@ -95,7 +100,7 @@ fn parse_attestation_input(data: &[u8]) -> Result<AttestationInput, String> {
 
     // Fallback: treat as raw data with default schema and recipient
     Ok(AttestationInput {
-        schema: [0u8; 32], // Default schema - should be configured
+        schema: [0u8; 32],    // Default schema - should be configured
         recipient: [0u8; 20], // Zero address means no specific recipient
         data: data.to_vec(),
         expiration_time: 0, // No expiration
@@ -105,7 +110,7 @@ fn parse_attestation_input(data: &[u8]) -> Result<AttestationInput, String> {
 }
 
 /// Attempts to decode ABI-encoded attestation data
-fn try_decode_abi_attestation(data: &[u8]) -> Result<AttestationInput, String> {
+fn try_decode_abi_attestation(_data: &[u8]) -> Result<AttestationInput, String> {
     // For now, skip complex ABI decoding and return an error
     // This can be implemented later if needed for specific use cases
     Err("ABI decoding not yet implemented".to_string())
@@ -117,7 +122,7 @@ fn hex_to_bytes32(hex: &str) -> Result<[u8; 32], String> {
     if hex.len() != 64 {
         return Err(format!("Invalid hex length for bytes32: {}", hex.len()));
     }
-    
+
     let mut bytes = [0u8; 32];
     for (i, chunk) in hex.as_bytes().chunks(2).enumerate() {
         let hex_str = std::str::from_utf8(chunk).map_err(|e| e.to_string())?;
@@ -132,7 +137,7 @@ fn hex_to_address(hex: &str) -> Result<[u8; 20], String> {
     if hex.len() != 40 {
         return Err(format!("Invalid hex length for address: {}", hex.len()));
     }
-    
+
     let mut bytes = [0u8; 20];
     for (i, chunk) in hex.as_bytes().chunks(2).enumerate() {
         let hex_str = std::str::from_utf8(chunk).map_err(|e| e.to_string())?;
@@ -144,9 +149,9 @@ fn hex_to_address(hex: &str) -> Result<[u8; 20], String> {
 /// JSON input format for attestations
 #[derive(Debug, Deserialize)]
 struct JsonAttestationInput {
-    schema: String,           // Hex string
-    recipient: String,        // Hex address
-    data: String,            // String data to attest
+    schema: String,    // Hex string
+    recipient: String, // Hex address
+    data: String,      // String data to attest
     expiration_time: Option<u64>,
     revocable: Option<bool>,
     ref_uid: Option<String>, // Optional reference UID
