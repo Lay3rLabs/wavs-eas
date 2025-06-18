@@ -7,6 +7,7 @@ This allows for AVSs to make attestations and perform computations over attestat
 TODO:
 1. WAVS component that makes an attestation
 2. A WAVS AVS that performs computations over attestations
+3. Add eas indexing service to docker-compose.yml
 3. Simple UI to make attestations
 
 WAVS Component Examples:
