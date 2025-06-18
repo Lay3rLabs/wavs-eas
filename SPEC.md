@@ -15,6 +15,13 @@ WAVS Component Examples:
 - A WAVS AVS that performs computations over attestations
 - Composing botth together (i.e. a WAVS AVS that performs computations over attestations and makes attestations)
 
+
+Flow:
+- Trigger.s.sol script emits an event
+- Event is picked up by WAVS and the eas-attest component is run
+- Result is submitted the Attester.sol contract
+
+
 Flow:
 1. User makes an attestation using the WAVS component
 2. The attestation is stored on the EAS contract

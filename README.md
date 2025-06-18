@@ -1,13 +1,12 @@
-# [WAVS](https://docs.wavs.xyz) Monorepo Template
+# [WAVS](https://docs.wavs.xyz) EAS Template
 
 **Template for getting started with developing WAVS applications**
 
-A template for developing WebAssembly AVS applications using Rust and Solidity, configured for Windows *WSL*, Linux, and MacOS. The sample oracle service fetches the current price of a cryptocurrency from [CoinMarketCap](https://coinmarketcap.com) and saves it on chain via the operators.
+A Ethereum Attestation Service template for developing Web Assembly Verifiable Services using Rust and Solidity, configured for Windows *WSL*, Linux, and MacOS.
 
-**Languages**
+<!-- **Languages**
  * [Rust (this example)](./components/evm-price-oracle/)
- * [Go](./components/golang-evm-price-oracle/README.md)
- * [JS / TS](./components/js-evm-price-oracle/README.md)
+ * [JS / TS](./components/js-evm-price-oracle/README.md) -->
 
 ## System Requirements
 
@@ -132,7 +131,7 @@ warg key new
 ```bash docci-ignore
 # if foundry is not installed:
 # `curl -L https://foundry.paradigm.xyz | bash && $HOME/.foundry/bin/foundryup`
-forge init --template Lay3rLabs/wavs-foundry-template my-wavs --branch main
+forge init --template Lay3rLabs/wavs-eas my-wavs-eas-app --branch main
 ```
 
 > \[!TIP]
@@ -173,29 +172,16 @@ make wasi-build
 
 ## Testing the Price Feed Component Locally
 
-How to test the component locally for business logic validation before on-chain deployment. An ID of 1 for the oracle component is Bitcoin.
+How to test the component locally for business logic validation before on-chain deployment.
 
 TODO! Update this to actually work with our components
 ```bash
-COIN_MARKET_CAP_ID=1 make wasi-exec
+make wasi-exec
 ```
 
 Expected output:
 
 ```shell docci-ignore
-input id: 1
-resp_data: PriceFeedData {
-    symbol: "BTC",
-    timestamp: "2025-04-01T00:00:00.000Z",
-    price: 82717.27035239758
-}
-INFO Fuel used: 653415
-
-Result (hex encoded):
-7b2273796d626f6c223a22425443222c2274696d657374616d70223a22323032352d30342d30315430303a34...
-
-Result (utf8):
-{"symbol":"BTC","timestamp":"2025-04-01T00:00:00.000Z","price":82717.27035239758}
 ```
 
 ## WAVS
@@ -361,6 +347,8 @@ COMMAND="list_operator" PAST_BLOCKS=500 make wavs-middleware
 
 Anyone can now call the [trigger contract](./src/contracts/WavsTrigger.sol) which emits the trigger event WAVS is watching for from the previous step. WAVS then calls the service and saves the result on-chain.
 
+NOTE: the trigger contract is for example purposes only.
+
 ```bash
 # Rust & Typescript - request BTC from CMC
 export INPUT_DATA=`cast abi-encode "addTrigger(string)" "1"`
@@ -384,12 +372,12 @@ forge script ./script/Trigger.s.sol ${SERVICE_TRIGGER_ADDR} ${INPUT_DATA} --sig 
 
 Query the latest submission contract id from the previous request made.
 
-```bash docci-delay-per-cmd=2 docci-output-contains="1"
-RPC_URL=${RPC_URL} make get-trigger
+```bash
+forge script ./script/ShowResult.s.sol ${SERVICE_TRIGGER_ADDR} --sig 'trigger(string)' --rpc-url $(RPC_URL) --broadcast
 ```
 
-```bash docci-delay-per-cmd=2 docci-output-contains="BTC"
-TRIGGER_ID=1 RPC_URL=${RPC_URL} make show-result
+```bash
+forge script ./script/ShowResult.s.sol ${SERVICE_SUBMISSION_ADDR} ${TRIGGER_ID} --sig 'data(string,uint64)' --rpc-url $(RPC_URL) --broadcast
 ```
 
 ## AI Coding Agents

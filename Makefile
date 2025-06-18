@@ -5,8 +5,8 @@ SUDO := $(shell if groups | grep -q docker; then echo ''; else echo 'sudo'; fi)
 
 # Define common variables
 CARGO=cargo
-INPUT_DATA?=1
-COMPONENT_FILENAME?=evm_price_oracle.wasm
+INPUT_DATA?=``
+COMPONENT_FILENAME?=wavs_eas_attest.wasm
 CREDENTIAL?=""
 DOCKER_IMAGE?=ghcr.io/lay3rlabs/wavs:35c96a4
 MIDDLEWARE_DOCKER_IMAGE?=ghcr.io/lay3rlabs/wavs-middleware:0.4.1
@@ -144,16 +144,6 @@ deploy-service:
 	@echo "🚀 Deploying service from: ${SERVICE_URL}..."
 	@$(WAVS_CMD) deploy-service --service-url ${SERVICE_URL} --log-level=debug --data /data/.docker --home /data $(if $(WAVS_ENDPOINT),--wavs-endpoint $(WAVS_ENDPOINT),) $(if $(IPFS_GATEWAY),--ipfs-gateway $(IPFS_GATEWAY),)
 	@echo "✅ Service deployed successfully"
-
-## get-trigger: get the trigger id | SERVICE_TRIGGER_ADDR, RPC_URL
-get-trigger:
-	@forge script ./script/ShowResult.s.sol ${SERVICE_TRIGGER_ADDR} --sig 'trigger(string)' --rpc-url $(RPC_URL) --broadcast
-
-TRIGGER_ID?=1
-## show-result: showing the result | SERVICE_SUBMISSION_ADDR, TRIGGER_ID, RPC_URL
-show-result:
-	@forge script ./script/ShowResult.s.sol ${SERVICE_SUBMISSION_ADDR} ${TRIGGER_ID} --sig 'data(string,uint64)' --rpc-url $(RPC_URL) --broadcast
-
 
 PINATA_API_KEY?=""
 ## upload-to-ipfs: uploading the a service config to IPFS | SERVICE_FILE, [PINATA_API_KEY]
