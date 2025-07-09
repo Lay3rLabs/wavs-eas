@@ -30,3 +30,10 @@ Flow:
 5. The WAVS component can make attestations based on the results of the computations
 6. A new attestation of the graph is made using using an attestation (to update membership)
 7. Graphs and computations over the graph can be proven
+
+## TODO make Set contract
+A set is an account contract represents some subset of the graph.
+
+It basically has membership (a set of addresses and their weights), which can be queried and updated via WAVS.
+
+handleSubmitEnvelope should get the updated weights and sync them as updated weights. These weights could be connected to a voting power contract (i.e Govenor, or some distribution contract) or a splitter contract.
