@@ -7,6 +7,7 @@ node_modules/
 
 # WAVS
 .env
+.env-e
 compiled/*.wasm
 .docker/*.json
 .docker/*.log
@@ -26,3 +27,6 @@ cast
 chisel
 forge
 foundry_nightly_linux_arm64.tar.gz
+
+# Misc
+.DS_Store

@@ -78,5 +78,6 @@
       "icon": "robot",
       "overrideName": true
     }
-  }
+  },
+  "makefile.configureOnOpen": false
 }

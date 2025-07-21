@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.27;
+pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -28,11 +28,16 @@ contract DeployEAS is Common {
     /// @notice Deploy EAS contracts and WAVS integration
     /// @param wavsServiceManagerAddr The WAVS service manager address
     /// @return deployment The deployed contract addresses
-    function run(string calldata wavsServiceManagerAddr) public returns (EASDeployment memory deployment) {
+    function run(
+        string calldata wavsServiceManagerAddr
+    ) public returns (EASDeployment memory deployment) {
         vm.startBroadcast(_privateKey);
 
         address serviceManager = vm.parseAddress(wavsServiceManagerAddr);
-        require(serviceManager != address(0), "Invalid service manager address");
+        require(
+            serviceManager != address(0),
+            "Invalid service manager address"
+        );
 
         console.log("Deploying EAS contracts...");
 
@@ -52,12 +57,17 @@ contract DeployEAS is Common {
         console.log("LogResolver deployed at:", deployment.logResolver);
 
         // 4. Deploy SchemaRegistrar
-        SchemaRegistrar schemaRegistrar = new SchemaRegistrar(ISchemaRegistry(deployment.schemaRegistry));
+        SchemaRegistrar schemaRegistrar = new SchemaRegistrar(
+            ISchemaRegistry(deployment.schemaRegistry)
+        );
         deployment.schemaRegistrar = address(schemaRegistrar);
         console.log("SchemaRegistrar deployed at:", deployment.schemaRegistrar);
 
         // 5. Deploy Attester (main WAVS integration contract)
-        Attester attester = new Attester(IEAS(deployment.eas), IWavsServiceManager(serviceManager));
+        Attester attester = new Attester(
+            IEAS(deployment.eas),
+            IWavsServiceManager(serviceManager)
+        );
         deployment.attester = address(attester);
         console.log("Attester deployed at:", deployment.attester);
 
@@ -70,7 +80,10 @@ contract DeployEAS is Common {
             ISchemaResolver(deployment.logResolver),
             true // revocable
         );
-        console.log("Basic schema registered:", vm.toString(deployment.basicSchema));
+        console.log(
+            "Basic schema registered:",
+            vm.toString(deployment.basicSchema)
+        );
 
         // Compute result schema for computation results
         deployment.computeSchema = schemaRegistrar.register(
@@ -78,7 +91,10 @@ contract DeployEAS is Common {
             ISchemaResolver(deployment.logResolver),
             true // revocable
         );
-        console.log("Compute schema registered:", vm.toString(deployment.computeSchema));
+        console.log(
+            "Compute schema registered:",
+            vm.toString(deployment.computeSchema)
+        );
 
         vm.stopBroadcast();
 
@@ -90,6 +106,9 @@ contract DeployEAS is Common {
         console.log("SchemaRegistrar:", deployment.schemaRegistrar);
         console.log("LogResolver:", deployment.logResolver);
         console.log("Basic Schema ID:", vm.toString(deployment.basicSchema));
-        console.log("Compute Schema ID:", vm.toString(deployment.computeSchema));
+        console.log(
+            "Compute Schema ID:",
+            vm.toString(deployment.computeSchema)
+        );
     }
 }

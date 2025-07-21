@@ -36,7 +36,7 @@ source script/deploy-contracts.sh
 sleep 1
 
 ### === Deploy Service ===
-export COMPONENT_FILENAME=evm_price_oracle.wasm
+export COMPONENT_FILENAME=wasm_eas_attest.wasm
 if [ "$(sh ./script/get-deploy-status.sh)" = "TESTNET" ]; then
     read -p "Enter the component filename (default: ${COMPONENT_FILENAME}): " input_filename
     if [ -n "$input_filename" ]; then
@@ -44,7 +44,7 @@ if [ "$(sh ./script/get-deploy-status.sh)" = "TESTNET" ]; then
     fi
 fi
 
-export PKG_NAME="evmrustoracle"
+export PKG_NAME="wasm-eas-attest"
 if [ "$(sh ./script/get-deploy-status.sh)" = "TESTNET" ]; then
     read -p "Enter the package name (default: ${PKG_NAME}): " input_pkg_name
     if [ -n "$input_pkg_name" ]; then
