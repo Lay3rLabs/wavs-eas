@@ -21,7 +21,7 @@ sh ./build_service.sh
 FUEL_LIMIT=${FUEL_LIMIT:-1000000000000}
 MAX_GAS=${MAX_GAS:-5000000}
 FILE_LOCATION=${FILE_LOCATION:-".docker/service.json"}
-TRIGGER_EVENT=${TRIGGER_EVENT:-"NewTrigger(bytes)"}
+TRIGGER_EVENT=${TRIGGER_EVENT:-"AttestationRequested(address,bytes32,address,bytes)"}
 TRIGGER_CHAIN=${TRIGGER_CHAIN:-"local"}
 SUBMIT_CHAIN=${SUBMIT_CHAIN:-"local"}
 AGGREGATOR_URL=${AGGREGATOR_URL:-""}

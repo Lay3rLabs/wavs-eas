@@ -5,16 +5,17 @@ import {ISimpleTrigger} from "interfaces/IWavsTrigger.sol";
 
 /// @title EASAttestTrigger
 /// @notice Simplified trigger contract for EAS attestation creation
-/// @dev This contract allows direct attestation data submission to WAVS for processing
+/// @dev This contract allows direct attestation data submission to WAVS for testing
 contract EASAttestTrigger is ISimpleTrigger {
     /// @inheritdoc ISimpleTrigger
     TriggerId public nextTriggerId = TriggerId.wrap(1);
 
     /// @inheritdoc ISimpleTrigger
     mapping(TriggerId _triggerId => Trigger _trigger) public triggersById;
-    
+
     /// @notice Internal mapping for triggers by creator
-    mapping(address _creator => TriggerId[] _triggerIds) internal _triggerIdsByCreator;
+    mapping(address _creator => TriggerId[] _triggerIds)
+        internal _triggerIdsByCreator;
 
     /// @notice EAS Attested event that WAVS component expects
     event AttestedEvent(
@@ -40,26 +41,33 @@ contract EASAttestTrigger is ISimpleTrigger {
     /// @param schema The schema UID for the attestation
     /// @param recipient The recipient address (use zero address for no specific recipient)
     /// @param data The attestation data as string
-    function createAttestationTrigger(
+    function triggerRequestAttestation(
         bytes32 schema,
         address recipient,
         string calldata data
     ) external {
         // Create JSON payload for the EAS component
-        string memory jsonPayload = string(abi.encodePacked(
-            '{"schema":"', _bytes32ToHex(schema), 
-            '","recipient":"', _addressToHex(recipient),
-            '","data":"', data, 
-            '","expiration_time":0,"revocable":true}'
-        ));
+        string memory jsonPayload = string(
+            abi.encodePacked(
+                '{"schema":"',
+                _bytes32ToHex(schema),
+                '","recipient":"',
+                _addressToHex(recipient),
+                '","data":"',
+                data,
+                '","expiration_time":0,"revocable":true}'
+            )
+        );
 
         bytes memory triggerData = bytes(jsonPayload);
-        
+
         // Store trigger using inherited interface
         _addTrigger(triggerData);
 
         // Generate a unique UID for this attestation request
-        bytes32 uid = keccak256(abi.encodePacked(nextTriggerId, block.timestamp, msg.sender));
+        bytes32 uid = keccak256(
+            abi.encodePacked(nextTriggerId, block.timestamp, msg.sender)
+        );
 
         // Emit AttestedEvent that the EAS component expects
         emit AttestedEvent(recipient, msg.sender, uid, schema);
@@ -70,15 +78,17 @@ contract EASAttestTrigger is ISimpleTrigger {
 
     /// @notice Creates an attestation trigger with raw bytes data
     /// @param data Raw attestation data (will use component defaults)
-    function createRawAttestationTrigger(bytes calldata data) external {
+    function triggerRequestRawAttestation(bytes calldata data) external {
         _addTrigger(data);
 
         // Generate a unique UID for this attestation request
-        bytes32 uid = keccak256(abi.encodePacked(nextTriggerId, block.timestamp, msg.sender));
-        
+        bytes32 uid = keccak256(
+            abi.encodePacked(nextTriggerId, block.timestamp, msg.sender)
+        );
+
         // Emit AttestedEvent with default values for raw data
         emit AttestedEvent(address(0), msg.sender, uid, bytes32(0));
-        
+
         emit AttestationRequested(msg.sender, bytes32(0), address(0), data);
     }
 
@@ -87,24 +97,55 @@ contract EASAttestTrigger is ISimpleTrigger {
         _addTrigger(_data);
 
         // Generate a unique UID for this attestation request
-        bytes32 uid = keccak256(abi.encodePacked(nextTriggerId, block.timestamp, msg.sender));
-        
+        bytes32 uid = keccak256(
+            abi.encodePacked(nextTriggerId, block.timestamp, msg.sender)
+        );
+
         // Emit AttestedEvent with default values for generic trigger
         emit AttestedEvent(address(0), msg.sender, uid, bytes32(0));
     }
 
+    // function addTrigger(bytes memory _data) external {
+    //     // Get the next trigger id
+    //     nextTriggerId = TriggerId.wrap(TriggerId.unwrap(nextTriggerId) + 1);
+    //     TriggerId _triggerId = nextTriggerId;
+
+    //     // Create the trigger
+    //     Trigger memory _trigger = Trigger({creator: msg.sender, data: _data});
+
+    //     // Update storages
+    //     triggersById[_triggerId] = _trigger;
+    //     _triggerIdsByCreator[msg.sender].push(_triggerId);
+
+    //     // Emit AttestedEvent that the EAS component expects
+    //     // Generate a mock UID from trigger ID and data hash
+    //     bytes32 uid = keccak256(abi.encodePacked(_triggerId, block.timestamp));
+    //     bytes32 schema_uid = bytes32(0); // Default schema, can be configured
+
+    //     emit AttestedEvent(
+    //         address(0), // recipient (can be extracted from _data if needed)
+    //         msg.sender, // attester is the caller
+    //         uid,
+    //         schema_uid
+    //     );
+    // }
+
     /// @inheritdoc ISimpleTrigger
-    function getTrigger(TriggerId triggerId) external view override returns (TriggerInfo memory _triggerInfo) {
+    function getTrigger(
+        TriggerId triggerId
+    ) external view override returns (TriggerInfo memory _triggerInfo) {
         Trigger storage _trigger = triggersById[triggerId];
         _triggerInfo = TriggerInfo({
-            triggerId: triggerId, 
-            creator: _trigger.creator, 
+            triggerId: triggerId,
+            creator: _trigger.creator,
             data: _trigger.data
         });
     }
 
     /// @inheritdoc ISimpleTrigger
-    function triggerIdsByCreator(address _creator) external view returns (TriggerId[] memory _triggerIds) {
+    function triggerIdsByCreator(
+        address _creator
+    ) external view returns (TriggerId[] memory _triggerIds) {
         _triggerIds = _triggerIdsByCreator[_creator];
     }
 
@@ -129,11 +170,13 @@ contract EASAttestTrigger is ISimpleTrigger {
     /// @notice Converts bytes32 to hex string
     /// @param value The bytes32 value to convert
     /// @return Hex string representation
-    function _bytes32ToHex(bytes32 value) internal pure returns (string memory) {
+    function _bytes32ToHex(
+        bytes32 value
+    ) internal pure returns (string memory) {
         bytes memory alphabet = "0123456789abcdef";
         bytes memory str = new bytes(66);
-        str[0] = '0';
-        str[1] = 'x';
+        str[0] = "0";
+        str[1] = "x";
         for (uint256 i = 0; i < 32; i++) {
             str[2 + i * 2] = alphabet[uint8(value[i] >> 4)];
             str[3 + i * 2] = alphabet[uint8(value[i] & 0x0f)];
@@ -147,10 +190,12 @@ contract EASAttestTrigger is ISimpleTrigger {
     function _addressToHex(address addr) internal pure returns (string memory) {
         bytes memory alphabet = "0123456789abcdef";
         bytes memory str = new bytes(42);
-        str[0] = '0';
-        str[1] = 'x';
+        str[0] = "0";
+        str[1] = "x";
         for (uint256 i = 0; i < 20; i++) {
-            str[2 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i) + 4))];
+            str[2 + i * 2] = alphabet[
+                uint8(uint160(addr) >> (8 * (19 - i) + 4))
+            ];
             str[3 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i)))];
         }
         return string(str);

@@ -45,16 +45,10 @@ export EAS_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("EAS d
 export EAS_ATTESTER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("Attester deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
 export EAS_SCHEMA_REGISTRAR_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("SchemaRegistrar deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
 export EAS_LOG_RESOLVER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("LogResolver deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
+export EAS_ATTEST_TRIGGER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("EASAttestTrigger deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
 
-# Still deploy SimpleTrigger as it's used for triggering events
-echo "📦 Deploying SimpleTrigger..."
-forge create SimpleTrigger \
-    --json \
-    --broadcast \
-    --rpc-url "${RPC_URL}" \
-    --private-key "${DEPLOYER_PK}" > .docker/trigger.json
-
-export SERVICE_TRIGGER_ADDR=$(jq -r '.deployedTo' .docker/trigger.json)
+# Use EAS Attest Trigger as the main service trigger
+export SERVICE_TRIGGER_ADDR="${EAS_ATTEST_TRIGGER_ADDR}"
 
 # Create consolidated deployment info
 cat > .docker/deployment_summary.json << EOF
@@ -86,6 +80,7 @@ echo "   EAS_ADDR: ${EAS_ADDR}"
 echo "   EAS_ATTESTER_ADDR: ${EAS_ATTESTER_ADDR}"
 echo "   EAS_SCHEMA_REGISTRAR_ADDR: ${EAS_SCHEMA_REGISTRAR_ADDR}"
 echo "   EAS_LOG_RESOLVER_ADDR: ${EAS_LOG_RESOLVER_ADDR}"
+echo "   EAS_ATTEST_TRIGGER_ADDR: ${EAS_ATTEST_TRIGGER_ADDR}"
 echo ""
 echo "🎯 Service Contracts:"
 echo "   SERVICE_TRIGGER_ADDR: ${SERVICE_TRIGGER_ADDR}"

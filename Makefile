@@ -100,12 +100,11 @@ start-all-local: clean-docker setup-env
 
 ## get-trigger-from-deploy: getting the trigger address from the script deploy
 get-trigger-from-deploy:
-	@jq -r '.deployedTo' "./.docker/trigger.json"
+	@jq -r '.service_contracts.trigger' .docker/deployment_summary.json
 
 ## get-submit-from-deploy: getting the submit address from the script deploy
 get-submit-from-deploy:
-	@jq -r '.deployedTo' "./.docker/submit.json"
-
+	@jq -r '.logs[] | select(type == "string" and startswith("Attester deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo ""
 ## wavs-cli: running wavs-cli in docker
 wavs-cli:
 	@$(WAVS_CMD) $(filter-out $@,$(MAKECMDGOALS))

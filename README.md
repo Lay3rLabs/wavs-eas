@@ -2,7 +2,7 @@
 
 **Template for getting started with developing WAVS applications**
 
-A Ethereum Attestation Service template for developing Web Assembly Verifiable Services using Rust and Solidity, configured for Windows *WSL*, Linux, and MacOS.
+A Ethereum Attestation Service template for developing Web Assembly Verifiable Services using Rust and Solidity, configured for Windows _WSL_, Linux, and MacOS.
 
 <!-- **Languages**
  * [Rust (this example)](./components/evm-price-oracle/)
@@ -14,6 +14,7 @@ A Ethereum Attestation Service template for developing Web Assembly Verifiable S
 <summary>Core (Docker, Compose, Make, JQ, Node v21+, Foundry)</summary>
 
 ## Ubuntu Base
+
 - **Linux**: `sudo apt update && sudo apt install build-essential`
 
 ### Docker
@@ -26,28 +27,34 @@ If prompted, remove container with `sudo apt remove containerd.io`.
 - [Docker Documentation](https://docs.docker.com/get-started/get-docker/)
 
 > **Note:** `sudo` is only used for Docker-related commands in this project. If you prefer not to use sudo with Docker, you can add your user to the Docker group with:
+>
 > ```bash
 > sudo groupadd docker && sudo usermod -aG docker $USER
 > ```
+>
 > After adding yourself to the group, log out and back in for changes to take effect.
 
 ### Docker Compose
+
 - **MacOS**: Already installed with Docker installer
-> `sudo apt remove docker-compose-plugin` may be required if you get a `dpkg` error
+  > `sudo apt remove docker-compose-plugin` may be required if you get a `dpkg` error
 - **Linux + Windows WSL**: `sudo apt-get install docker-compose-v2`
 - [Compose Documentation](https://docs.docker.com/compose/)
 
 ### Make
+
 - **MacOS**: `brew install make`
 - **Linux + Windows WSL**: `sudo apt -y install make`
 - [Make Documentation](https://www.gnu.org/software/make/manual/make.html)
 
 ### JQ
+
 - **MacOS**: `brew install jq`
 - **Linux + Windows WSL**: `sudo apt -y install jq`
 - [JQ Documentation](https://jqlang.org/download/)
 
 ### Node.js
+
 - **Required Version**: v21+
 - [Installation via NVM](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
 
@@ -57,6 +64,7 @@ nvm install --lts
 ```
 
 ### Foundry
+
 ```bash docci-ignore
 curl -L https://foundry.paradigm.xyz | bash && $HOME/.foundry/bin/foundryup
 ```
@@ -103,10 +111,10 @@ wkg: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required b
 ```
 
 If GLIB is out of date. Consider updating your system using:
+
 ```bash
 sudo do-release-upgrade
 ```
-
 
 ```bash docci-ignore
 # Install required cargo components
@@ -175,6 +183,7 @@ make wasi-build
 How to test the component locally for business logic validation before on-chain deployment.
 
 TODO! Update this to actually work with our components
+
 ```bash
 make wasi-exec
 ```
@@ -182,16 +191,19 @@ make wasi-exec
 Expected output:
 
 ```shell docci-ignore
+
 ```
 
 ## WAVS
 
 > \[!NOTE]
 > If you are running on a Mac with an ARM chip, you will need to do the following:
+>
 > - Set up Rosetta: `softwareupdate --install-rosetta`
 > - Enable Rosetta (Docker Desktop: Settings -> General -> enable "Use Rosetta for x86_64/amd64 emulation on Apple Silicon")
 >
 > Configure one of the following networking:
+>
 > - Docker Desktop: Settings -> Resources -> Network -> 'Enable Host Networking'
 > - `brew install chipmk/tap/docker-mac-net-connect && sudo brew services start chipmk/tap/docker-mac-net-connect`
 
@@ -202,11 +214,12 @@ Start an ethereum node (anvil), the WAVS service, and deploy [eigenlayer](https:
 ### Enable Telemetry (optional)
 
 Set Log Level:
-  - Open the `.env` file.
-  - Set the `log_level` variable for wavs to debug to ensure detailed logs are captured.
+
+- Open the `.env` file.
+- Set the `log_level` variable for wavs to debug to ensure detailed logs are captured.
 
 > \[!NOTE]
-To see details on how to access both traces and metrics, please check out [Telemetry Documentation](telemetry/telemetry.md).
+> To see details on how to access both traces and metrics, please check out [Telemetry Documentation](telemetry/telemetry.md).
 
 ### Start the backend
 
@@ -242,142 +255,131 @@ This script automates the complete WAVS deployment process in a single command:
 13. **Register Operator**: Registers with Eigenlayer AVS (0.001 ETH stake)
 14. **Verify Registration**: Confirms operator registration
 
-### Result
-
-A fully operational WAVS service that monitors blockchain events, executes WebAssembly components, and submits verified results on-chain.
+**Result:** A fully operational WAVS service that monitors blockchain events, executes WebAssembly components, and submits verified results on-chain.
 
 ```bash
 export RPC_URL=`bash ./script/get-rpc.sh`
-export AGGREGATOR_URL=http://127.0.0.1:8001
+export AGGREGATOR_URL=http://localhost:8001
 
 bash ./script/deploy-script.sh
 ```
 
-## Create Deployer, upload Eigenlayer
+# EAS Attestation Trigger Scripts
 
-These sections can be run on the **same** machine, or separate for testnet environments. Run the following steps on the deployer/aggregator machine.
+Scripts for triggering EAS attestation creation via WAVS components.
 
-```bash
-# local: create deployer & auto fund. testnet: create & iterate check balance
-bash ./script/create-deployer.sh
+## Available Scripts
 
-## Deploy Eigenlayer from Deployer
-COMMAND=deploy make wavs-middleware
-```
+### Trigger.s.sol
 
-## Deploy Service Contracts
+**Purpose**: Comprehensive EAS attestation trigger script with clean API for testing and production use.
 
-`WAVS_SERVICE_MANAGER_ADDRESS` is the address of the Eigenlayer service manager contract. It was deployed in the previous step. Then you deploy the trigger and submission contracts which depends on the service manager. The service manager will verify that a submission is valid (from an authorized operator) before saving it to the blockchain. The trigger contract is any arbitrary contract that emits some event that WAVS will watch for. Yes, this can be on another chain (e.g. an L2) and then the submission contract on the L1 *(Ethereum for now because that is where Eigenlayer is deployed)*.
+**Core Trigger Functions**:
 
-```bash docci-delay-per-cmd=2
-source script/deploy-contracts.sh
-```
+- `triggerEASAttestation(serviceTriggerAddr, data)` - Creates EAS attestation with default schema
+- `triggerCustomEASAttestation(serviceTriggerAddr, schema, recipient, data)` - Creates custom EAS attestation
+- `triggerJsonAttestation(triggerAddr, schema, recipient, data)` - Creates structured JSON attestation
+- `triggerRawAttestation(triggerAddr, rawData)` - Creates raw data attestation
 
-## Deploy Service
+**Example Functions**:
 
-Deploy the compiled component with the contract information from the previous steps. Review the [makefile](./Makefile) for more details and configuration options.`TRIGGER_EVENT` is the event that the trigger contract emits and WAVS watches for. By altering `SERVICE_TRIGGER_ADDR` you can watch events for contracts others have deployed.
+- `triggerTestimonialExample(triggerAddr)` - Example testimonial attestation
+- `triggerSkillVerificationExample(triggerAddr, skillHolder)` - Example skill verification
 
-```bash docci-delay-per-cmd=3
-export COMPONENT_FILENAME=wavs_eas_attest.wasm
-export PKG_NAME="easattest"
-export PKG_VERSION="0.1.0"
-# ** Testnet Setup: https://wa.dev/account/credentials/new -> warg login
-source script/upload-to-wasi-registry.sh || true
+**Query Functions**:
 
-# Testnet: set values (default: local if not set)
-# export TRIGGER_CHAIN=holesky
-# export SUBMIT_CHAIN=holesky
+- `showTrigger(serviceTriggerAddr)` - Shows current trigger ID
+- `queryAttestations(easAddr, schemaId, recipient)` - Query EAS attestations by schema/recipient
+- `showAttestation(easAddr, attestationUid)` - Show detailed attestation information
 
-# Package not found with wa.dev? -- make sure it is public
-export AGGREGATOR_URL=http://127.0.0.1:8001
-REGISTRY=${REGISTRY} source ./script/build-service.sh
-```
+## Environment Setup
 
-## Upload to IPFS
+Set these variables from deployment output:
 
 ```bash
-# Upload service.json to IPFS
-SERVICE_FILE=.docker/service.json source ./script/ipfs-upload.sh
+# Parse deployment addresses from .docker/deployment_summary.json
+export RPC_URL=`bash ./script/get-rpc.sh`
+export SERVICE_TRIGGER_ADDR=$(jq -r '.service_contracts.trigger' .docker/deployment_summary.json)
+export EAS_ADDR=$(jq -r '.eas_contracts.eas' .docker/deployment_summary.json)
 ```
 
-## Start Aggregator
+## Usage Examples
 
-**TESTNET** You can move the aggregator it to its own machine for testnet deployments, it's easiest to run this on the deployer machine first. If moved, ensure you set the env variables correctly (copied and pasted from the previous steps on the other machine).
+### Basic Attestation (Using Default Schema)
+
+Create a basic EAS Attestation:
 
 ```bash
-bash ./script/create-aggregator.sh 1
-
-IPFS_GATEWAY=${IPFS_GATEWAY} bash ./infra/aggregator-1/start.sh
-
-wget -q --header="Content-Type: application/json" --post-data="{\"uri\": \"${IPFS_URI}\"}" ${AGGREGATOR_URL}/register-service -O -
+# Simple attestation with default values
+forge script script/Trigger.s.sol:EasTrigger --sig "triggerEASAttestation(string,string)" \
+  "${SERVICE_TRIGGER_ADDR}" \
+  "This person completed the Solidity course" \
+  --rpc-url $RPC_URL --broadcast
 ```
 
-## Start WAVS
+### Custom JSON Attestation
 
-**TESTNET** The WAVS service should be run in its own machine (creation, start, and opt-in). If moved, make sure you set the env variables correctly (copy pasted from the previous steps on the other machine).
+Create a custom EAS Attestation:
 
 ```bash
-bash ./script/create-operator.sh 1
-
-IPFS_GATEWAY=${IPFS_GATEWAY} bash ./infra/wavs-1/start.sh
-
-# Deploy the service JSON to WAVS so it now watches and submits.
-# 'opt in' for WAVS to watch (this is before we register to Eigenlayer)
-WAVS_ENDPOINT=http://127.0.0.1:8000 SERVICE_URL=${IPFS_URI} IPFS_GATEWAY=${IPFS_GATEWAY} make deploy-service
+# Custom attestation with specific schema and recipient
+forge script script/Trigger.s.sol:EasTrigger --sig "triggerJsonAttestation(string,string,string,string)" \
+  "${SERVICE_TRIGGER_ADDR}" \
+  "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" \
+  "0x742d35Cc6634C0532925a3b8D4f3e9dC9BfD16BB" \
+  "Advanced Solidity Development Skills Verified" \
+  --rpc-url $RPC_URL --broadcast
 ```
 
-## Register service specific operator
+### Raw Data Attestation
 
-Making test mnemonic: `cast wallet new-mnemonic --json | jq -r .mnemonic`
-
-Each service gets their own key path (hd_path). The first service starts at 1 and increments from there. Get the service ID
+Request creation of an Attestation via the WAVS service:
 
 ```bash
-SERVICE_INDEX=0 source ./script/avs-signing-key.sh
-
-# TESTNET: set WAVS_SERVICE_MANAGER_ADDRESS
-export WAVS_SERVICE_MANAGER_ADDRESS=$(jq -r .addresses.WavsServiceManager ./.nodes/avs_deploy.json)
-COMMAND="register ${OPERATOR_PRIVATE_KEY} ${AVS_SIGNING_ADDRESS} 0.001ether" make wavs-middleware
-
-# Verify registration
-COMMAND="list_operator" PAST_BLOCKS=500 make wavs-middleware
+# Raw attestation data (uses component defaults)
+forge script script/Trigger.s.sol:EasTrigger --sig "triggerRawAttestation(string,string)" \
+  "${SERVICE_TRIGGER_ADDR}" \
+  "Simple testimonial: Trustworthy individual" \
+  --rpc-url $RPC_URL --broadcast
 ```
 
-## Trigger the Service
+### Example Use Cases
 
-Anyone can now call the [trigger contract](./src/contracts/WavsTrigger.sol) which emits the trigger event WAVS is watching for from the previous step. WAVS then calls the service and saves the result on-chain.
-
-NOTE: the trigger contract is for example purposes only.
+Request creation of an Attestation via the WAVS service:
 
 ```bash
-# Rust & Typescript - request BTC from CMC
-export INPUT_DATA=`cast abi-encode "addTrigger(string)" "1"`
+# Create a testimonial attestation
+forge script script/Trigger.s.sol:EasTrigger --sig "triggerTestimonialExample(string)" \
+  "${SERVICE_TRIGGER_ADDR}" \
+  --rpc-url $RPC_URL --broadcast
 
-# Golang uses the raw value
-# export INPUT_DATA="1"
-
-# Get the trigger address from previous Deploy forge script
-export SERVICE_TRIGGER_ADDR=`make get-trigger-from-deploy`
-# Execute on the trigger contract, WAVS will pick this up and submit the result
-# on chain via the operators.
-
-# uses FUNDED_KEY as the executor (local: anvil account)
-source .env
-export RPC_URL=`sh ./script/get-rpc.sh`
-
-forge script ./script/Trigger.s.sol ${SERVICE_TRIGGER_ADDR} ${INPUT_DATA} --sig 'run(string,string)' --rpc-url ${RPC_URL} --broadcast
+# Create a skill verification for a specific address
+forge script script/Trigger.s.sol:EasTrigger --sig "triggerSkillVerificationExample(string,string)" \
+  "${SERVICE_TRIGGER_ADDR}" \
+  "0x742d35Cc6634C0532925a3b8D4f3e9dC9BfD16BB" \
+  --rpc-url $RPC_URL --broadcast
 ```
 
-## Show the result
-
-Query the latest submission contract id from the previous request made.
+### Query Functions
 
 ```bash
-forge script ./script/ShowResult.s.sol ${SERVICE_TRIGGER_ADDR} --sig 'trigger(string)' --rpc-url $(RPC_URL) --broadcast
-```
+# Show current trigger state
+forge script script/Trigger.s.sol:EasTrigger --sig "showTrigger(string)" \
+  "${SERVICE_TRIGGER_ADDR}" \
+  --rpc-url $RPC_URL
 
-```bash
-forge script ./script/ShowResult.s.sol ${SERVICE_SUBMISSION_ADDR} ${TRIGGER_ID} --sig 'data(string,uint64)' --rpc-url $(RPC_URL) --broadcast
+# Show specific attestation details
+forge script script/Trigger.s.sol:EasTrigger --sig "showAttestation(string,string)" \
+  "${EAS_ADDR}" \
+  "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" \
+  --rpc-url $RPC_URL
+
+# Query attestations by schema and recipient
+forge script script/Trigger.s.sol:EasTrigger --sig "queryAttestations(string,string,string)" \
+  "${EAS_ADDR}" \
+  "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" \
+  "0x742d35Cc6634C0532925a3b8D4f3e9dC9BfD16BB" \
+  --rpc-url $RPC_URL
 ```
 
 ## AI Coding Agents

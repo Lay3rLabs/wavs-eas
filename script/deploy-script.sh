@@ -8,7 +8,7 @@ fi
 
 if git status --porcelain | grep -q "^.* components/"; then
     echo "Found pending changes in components/*, building"
-    WASI_BUILD_DIR=components/evm-price-oracle make wasi-build
+    WASI_BUILD_DIR=components/eas-attest make wasi-build
 fi
 
 ### === Deploy Eigenlayer ===
@@ -36,7 +36,7 @@ source script/deploy-contracts.sh
 sleep 1
 
 ### === Deploy Service ===
-export COMPONENT_FILENAME=wasm_eas_attest.wasm
+export COMPONENT_FILENAME=wavs_eas_attest.wasm
 if [ "$(sh ./script/get-deploy-status.sh)" = "TESTNET" ]; then
     read -p "Enter the component filename (default: ${COMPONENT_FILENAME}): " input_filename
     if [ -n "$input_filename" ]; then

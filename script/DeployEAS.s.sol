@@ -9,6 +9,7 @@ import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contr
 import {Attester} from "../src/contracts/Attester.sol";
 import {SchemaRegistrar} from "../src/contracts/SchemaRegistrar.sol";
 import {LogResolver} from "../src/contracts/LogResolver.sol";
+import {EASAttestTrigger} from "../src/contracts/Trigger.sol";
 import {IWavsServiceManager} from "@wavs/interfaces/IWavsServiceManager.sol";
 import {Common} from "./Common.s.sol";
 
@@ -21,6 +22,7 @@ contract DeployEAS is Common {
         address attester;
         address schemaRegistrar;
         address logResolver;
+        address easAttestTrigger;
         bytes32 basicSchema;
         bytes32 computeSchema;
     }
@@ -71,7 +73,15 @@ contract DeployEAS is Common {
         deployment.attester = address(attester);
         console.log("Attester deployed at:", deployment.attester);
 
-        // 6. Register basic schemas
+        // 6. Deploy EASAttestTrigger
+        EASAttestTrigger easAttestTrigger = new EASAttestTrigger();
+        deployment.easAttestTrigger = address(easAttestTrigger);
+        console.log(
+            "EASAttestTrigger deployed at:",
+            deployment.easAttestTrigger
+        );
+
+        // 7. Register basic schemas
         console.log("Registering schemas...");
 
         // Basic attestation schema for general data
@@ -105,6 +115,7 @@ contract DeployEAS is Common {
         console.log("Attester:", deployment.attester);
         console.log("SchemaRegistrar:", deployment.schemaRegistrar);
         console.log("LogResolver:", deployment.logResolver);
+        console.log("EASAttestTrigger:", deployment.easAttestTrigger);
         console.log("Basic Schema ID:", vm.toString(deployment.basicSchema));
         console.log(
             "Compute Schema ID:",
