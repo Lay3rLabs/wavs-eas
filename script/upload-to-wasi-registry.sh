@@ -30,19 +30,19 @@ if [[ "$REGISTRY" == *"localhost"* ]] || [[ "$REGISTRY" == *"127.0.0.1"* ]]; the
 fi
 echo "Publishing to registry (${PROTOCOL}://${REGISTRY})..."
 
-# output=$(warg publish release --registry ${PROTOCOL}://${REGISTRY} --name ${PKG_NAMESPACE}:${PKG_NAME} --version ${PKG_VERSION} ./compiled/${COMPONENT_FILENAME})
-# echo "output: ${output}"
-# exit_code=$?
-# warg reset --registry ${PROTOCOL}://${REGISTRY}
+output=$(warg publish release --registry ${PROTOCOL}://${REGISTRY} --name ${PKG_NAMESPACE}:${PKG_NAME} --version ${PKG_VERSION} ./compiled/${COMPONENT_FILENAME})
+echo "output: ${output}"
+exit_code=$?
+warg reset --registry ${PROTOCOL}://${REGISTRY}
 
-# # Check for specific error conditions in the output
-# if [[ $exit_code -ne 0 ]]; then
-#     if [[ "$output" =~ "failed to prove inclusion" ]]; then
-#         echo "Package uploaded to local registry successfully..."
-#     elif [[ "$output" =~ "error sending request for url" ]]; then
-#         echo "NOTE: Check to make sure you are running the registry locally"
-#         echo "${output}"
-#     else
-#         echo "Unknown error occurred ${output}"
-#     fi
-# fi
+# Check for specific error conditions in the output
+if [[ $exit_code -ne 0 ]]; then
+    if [[ "$output" =~ "failed to prove inclusion" ]]; then
+        echo "Package uploaded to local registry successfully..."
+    elif [[ "$output" =~ "error sending request for url" ]]; then
+        echo "NOTE: Check to make sure you are running the registry locally"
+        echo "${output}"
+    else
+        echo "Unknown error occurred ${output}"
+    fi
+fi
