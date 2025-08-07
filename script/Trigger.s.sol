@@ -16,84 +16,6 @@ contract EasTrigger is Common {
     // TRIGGER FUNCTIONS
     // ============================================================
 
-    /// @notice Trigger EAS attestation with default schema and recipient
-    /// @param serviceTriggerAddr Address of the EAS trigger contract
-    /// @param data Attestation data string
-    function triggerEASAttestation(
-        string calldata serviceTriggerAddr,
-        string calldata data
-    ) public {
-        vm.startBroadcast(_privateKey);
-        EASAttestTrigger trigger = EASAttestTrigger(
-            vm.parseAddress(serviceTriggerAddr)
-        );
-
-        // Create JSON payload for EAS attestation component with defaults
-        string memory easJsonPayload = string(
-            abi.encodePacked(
-                '{"schema":"0x0000000000000000000000000000000000000000000000000000000000000000",',
-                '"recipient":"0x0000000000000000000000000000000000000000",',
-                '"data":"',
-                data,
-                '",',
-                '"expiration_time":0,"revocable":true}'
-            )
-        );
-
-        trigger.addTrigger(bytes(easJsonPayload));
-        ITypes.TriggerId triggerId = trigger.nextTriggerId();
-        console.log(
-            "EAS Attestation TriggerId:",
-            ITypes.TriggerId.unwrap(triggerId)
-        );
-        console.log("Attestation Data:", data);
-        vm.stopBroadcast();
-    }
-
-    /// @notice Trigger custom EAS attestation with specific schema and recipient
-    /// @param serviceTriggerAddr Address of the EAS trigger contract
-    /// @param schema Schema UID (hex string)
-    /// @param recipient Recipient address (hex string)
-    /// @param data Attestation data string
-    function triggerCustomEASAttestation(
-        string calldata serviceTriggerAddr,
-        string calldata schema,
-        string calldata recipient,
-        string calldata data
-    ) public {
-        vm.startBroadcast(_privateKey);
-        EASAttestTrigger trigger = EASAttestTrigger(
-            vm.parseAddress(serviceTriggerAddr)
-        );
-
-        // Create JSON payload for EAS attestation component
-        string memory easJsonPayload = string(
-            abi.encodePacked(
-                '{"schema":"',
-                schema,
-                '",',
-                '"recipient":"',
-                recipient,
-                '",',
-                '"data":"',
-                data,
-                '",',
-                '"expiration_time":0,"revocable":true}'
-            )
-        );
-
-        trigger.addTrigger(bytes(easJsonPayload));
-        ITypes.TriggerId triggerId = trigger.nextTriggerId();
-        console.log(
-            "Custom EAS Attestation TriggerId:",
-            ITypes.TriggerId.unwrap(triggerId)
-        );
-        console.log("Schema:", schema);
-        console.log("Recipient:", recipient);
-        console.log("Data:", data);
-        vm.stopBroadcast();
-    }
-
     /// @notice Trigger attestation creation with JSON format using new contract method
     /// @param triggerAddr Address of the EAS attest trigger contract
     /// @param schema Schema UID (hex string)
@@ -121,9 +43,6 @@ contract EasTrigger is Common {
 
         trigger.triggerRequestAttestation(schemaBytes, recipientAddr, data);
 
-        ITypes.TriggerId triggerId = trigger.nextTriggerId();
-        console.log("Trigger ID:", ITypes.TriggerId.unwrap(triggerId));
-
         vm.stopBroadcast();
     }
 
@@ -132,6 +51,8 @@ contract EasTrigger is Common {
     /// @param rawData Raw attestation data (will use component defaults)
     function triggerRawAttestation(
         string calldata triggerAddr,
+        string calldata schema,
+        string calldata recipient,
         string calldata rawData
     ) public {
         vm.startBroadcast(_privateKey);
@@ -143,84 +64,10 @@ contract EasTrigger is Common {
         console.log("Creating raw EAS attestation trigger:");
         console.log("Data:", rawData);
 
-        trigger.triggerRequestRawAttestation(bytes(rawData));
-
-        ITypes.TriggerId triggerId = trigger.nextTriggerId();
-        console.log("Trigger ID:", ITypes.TriggerId.unwrap(triggerId));
-
-        vm.stopBroadcast();
-    }
-
-    // ============================================================
-    // EXAMPLE TRIGGERS
-    // ============================================================
-
-    /// @notice Example: Create a simple testimonial attestation
-    /// @param triggerAddr Address of the EAS attest trigger contract
-    function triggerTestimonialExample(string calldata triggerAddr) public {
-        vm.startBroadcast(_privateKey);
-
-        EASAttestTrigger trigger = EASAttestTrigger(
-            vm.parseAddress(triggerAddr)
-        );
-
-        // Example schema for testimonials (you'd register this in EAS first)
-        bytes32 testimonialSchema = 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef;
-        address recipient = address(0); // No specific recipient
-        string
-            memory testimonialData = "This person is trustworthy and professional.";
-
-        console.log("Creating testimonial attestation:");
-        console.log("Data:", testimonialData);
-
-        trigger.triggerRequestAttestation(
-            testimonialSchema,
-            recipient,
-            testimonialData
-        );
-
-        ITypes.TriggerId triggerId = trigger.nextTriggerId();
-        console.log(
-            "Testimonial Trigger ID:",
-            ITypes.TriggerId.unwrap(triggerId)
-        );
-
-        vm.stopBroadcast();
-    }
-
-    /// @notice Example: Create a skill verification attestation
-    /// @param triggerAddr Address of the EAS attest trigger contract
-    /// @param skillHolder Address of the person whose skill is being attested
-    function triggerSkillVerificationExample(
-        string calldata triggerAddr,
-        string calldata skillHolder
-    ) public {
-        vm.startBroadcast(_privateKey);
-
-        EASAttestTrigger trigger = EASAttestTrigger(
-            vm.parseAddress(triggerAddr)
-        );
-
-        // Example schema for skill verification
-        bytes32 skillSchema = 0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab00;
-        address skillHolderAddr = vm.parseAddress(skillHolder);
-        string
-            memory skillData = "Verified: Advanced Solidity Development Skills";
-
-        console.log("Creating skill verification attestation:");
-        console.log("Skill holder:", skillHolder);
-        console.log("Skill:", skillData);
-
-        trigger.triggerRequestAttestation(
-            skillSchema,
-            skillHolderAddr,
-            skillData
-        );
-
-        ITypes.TriggerId triggerId = trigger.nextTriggerId();
-        console.log(
-            "Skill Verification Trigger ID:",
-            ITypes.TriggerId.unwrap(triggerId)
+        trigger.triggerRequestRawAttestation(
+            vm.parseBytes32(schema),
+            vm.parseAddress(recipient),
+            bytes(rawData)
         );
 
         vm.stopBroadcast();
@@ -229,17 +76,6 @@ contract EasTrigger is Common {
     // ============================================================
     // QUERY FUNCTIONS
     // ============================================================
-
-    /// @notice Show current trigger ID
-    /// @param serviceTriggerAddr Address of the trigger contract
-    function showTrigger(string calldata serviceTriggerAddr) public view {
-        EASAttestTrigger triggerInstance = EASAttestTrigger(
-            vm.parseAddress(serviceTriggerAddr)
-        );
-        ITypes.TriggerId triggerId = triggerInstance.nextTriggerId();
-
-        console.log("Next TriggerID:", ITypes.TriggerId.unwrap(triggerId));
-    }
 
     /// @notice Query EAS attestations for a specific schema and recipient
     /// @param easAddr The EAS contract address

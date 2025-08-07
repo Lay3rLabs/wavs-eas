@@ -1,22 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {ISimpleTrigger} from "interfaces/IWavsTrigger.sol";
-
 /// @title EASAttestTrigger
-/// @notice Simplified trigger contract for EAS attestation creation
+/// @notice Simplified trigger contract for WAVS EAS testing
 /// @dev This contract allows direct attestation data submission to WAVS for testing
-contract EASAttestTrigger is ISimpleTrigger {
-    /// @inheritdoc ISimpleTrigger
-    TriggerId public nextTriggerId = TriggerId.wrap(1);
-
-    /// @inheritdoc ISimpleTrigger
-    mapping(TriggerId _triggerId => Trigger _trigger) public triggersById;
-
-    /// @notice Internal mapping for triggers by creator
-    mapping(address _creator => TriggerId[] _triggerIds)
-        internal _triggerIdsByCreator;
-
+contract EASAttestTrigger {
     /// @notice EAS Attested event that WAVS component expects
     event AttestedEvent(
         address indexed recipient,
@@ -61,110 +49,19 @@ contract EASAttestTrigger is ISimpleTrigger {
 
         bytes memory triggerData = bytes(jsonPayload);
 
-        // Store trigger using inherited interface
-        _addTrigger(triggerData);
-
-        // Generate a unique UID for this attestation request
-        bytes32 uid = keccak256(
-            abi.encodePacked(nextTriggerId, block.timestamp, msg.sender)
-        );
-
-        // Emit AttestedEvent that the EAS component expects
-        emit AttestedEvent(recipient, msg.sender, uid, schema);
-
-        // Emit simplified event for monitoring
+        // Emit AttestationRequested event that the EAS component expects
         emit AttestationRequested(msg.sender, schema, recipient, triggerData);
     }
 
     /// @notice Creates an attestation trigger with raw bytes data
     /// @param data Raw attestation data (will use component defaults)
-    function triggerRequestRawAttestation(bytes calldata data) external {
-        _addTrigger(data);
-
-        // Generate a unique UID for this attestation request
-        bytes32 uid = keccak256(
-            abi.encodePacked(nextTriggerId, block.timestamp, msg.sender)
-        );
-
+    function triggerRequestRawAttestation(
+        bytes32 schema,
+        address recipient,
+        bytes calldata data
+    ) external {
         // Emit AttestedEvent with default values for raw data
-        emit AttestedEvent(address(0), msg.sender, uid, bytes32(0));
-
-        emit AttestationRequested(msg.sender, bytes32(0), address(0), data);
-    }
-
-    /// @inheritdoc ISimpleTrigger
-    function addTrigger(bytes memory _data) external {
-        _addTrigger(_data);
-
-        // Generate a unique UID for this attestation request
-        bytes32 uid = keccak256(
-            abi.encodePacked(nextTriggerId, block.timestamp, msg.sender)
-        );
-
-        // Emit AttestedEvent with default values for generic trigger
-        emit AttestedEvent(address(0), msg.sender, uid, bytes32(0));
-    }
-
-    // function addTrigger(bytes memory _data) external {
-    //     // Get the next trigger id
-    //     nextTriggerId = TriggerId.wrap(TriggerId.unwrap(nextTriggerId) + 1);
-    //     TriggerId _triggerId = nextTriggerId;
-
-    //     // Create the trigger
-    //     Trigger memory _trigger = Trigger({creator: msg.sender, data: _data});
-
-    //     // Update storages
-    //     triggersById[_triggerId] = _trigger;
-    //     _triggerIdsByCreator[msg.sender].push(_triggerId);
-
-    //     // Emit AttestedEvent that the EAS component expects
-    //     // Generate a mock UID from trigger ID and data hash
-    //     bytes32 uid = keccak256(abi.encodePacked(_triggerId, block.timestamp));
-    //     bytes32 schema_uid = bytes32(0); // Default schema, can be configured
-
-    //     emit AttestedEvent(
-    //         address(0), // recipient (can be extracted from _data if needed)
-    //         msg.sender, // attester is the caller
-    //         uid,
-    //         schema_uid
-    //     );
-    // }
-
-    /// @inheritdoc ISimpleTrigger
-    function getTrigger(
-        TriggerId triggerId
-    ) external view override returns (TriggerInfo memory _triggerInfo) {
-        Trigger storage _trigger = triggersById[triggerId];
-        _triggerInfo = TriggerInfo({
-            triggerId: triggerId,
-            creator: _trigger.creator,
-            data: _trigger.data
-        });
-    }
-
-    /// @inheritdoc ISimpleTrigger
-    function triggerIdsByCreator(
-        address _creator
-    ) external view returns (TriggerId[] memory _triggerIds) {
-        _triggerIds = _triggerIdsByCreator[_creator];
-    }
-
-    /// @notice Internal function to add trigger and emit raw data event
-    /// @param _data The trigger data
-    function _addTrigger(bytes memory _data) internal {
-        // Increment trigger ID
-        nextTriggerId = TriggerId.wrap(TriggerId.unwrap(nextTriggerId) + 1);
-        TriggerId _triggerId = nextTriggerId;
-
-        // Create the trigger
-        Trigger memory _trigger = Trigger({creator: msg.sender, data: _data});
-
-        // Update storage
-        triggersById[_triggerId] = _trigger;
-        _triggerIdsByCreator[msg.sender].push(_triggerId);
-
-        // WAVS monitors raw data events - no NewTrigger wrapper needed
-        // Component processes _data directly as raw TriggerData
+        emit AttestationRequested(msg.sender, schema, recipient, data);
     }
 
     /// @notice Converts bytes32 to hex string

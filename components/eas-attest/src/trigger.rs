@@ -1,7 +1,8 @@
 use crate::bindings::wavs::worker::layer_types::{
     TriggerData, TriggerDataEvmContractEvent, WasmResponse,
 };
-use alloy_sol_types::SolValue;
+use alloy_primitives::{FixedBytes, U256};
+use alloy_sol_types::SolType;
 use anyhow::Result;
 use wavs_wasi_utils::decode_event_log_data;
 
@@ -23,22 +24,30 @@ pub enum Destination {
 /// * `u64` - Trigger ID for tracking the request (0 for direct events)
 /// * `Vec<u8>` - The actual attestation data payload
 /// * `Destination` - Where the processed result should be sent
-pub fn decode_trigger_event(trigger_data: TriggerData) -> Result<(u64, Vec<u8>, Destination)> {
+pub fn decode_trigger_event(
+    trigger_data: TriggerData,
+) -> Result<(AttestationRequest, Destination)> {
     match trigger_data {
         TriggerData::EvmContractEvent(TriggerDataEvmContractEvent { log, .. }) => {
-            // Try to decode as EAS Attested event for direct attestation input
-            let event: AttestedEvent = decode_event_log_data!(log)?;
-            // Create attestation data from EAS event
-            let attestation_data = AttestationEventData {
-                uid: event.uid,
-                schema: event.schema_uid,
-                recipient: event.recipient,
-                attester: event.attester,
+            // Decode the AttestationRequested event
+            let event: AttestationRequested = decode_event_log_data!(log)?;
+            // Create attestation request data from the event
+            let attestation_request = AttestationRequest {
+                schema: event.schema,
+                data: AttestationRequestData {
+                    recipient: event.recipient,
+                    expirationTime: 0, // NO_EXPIRATION_TIME
+                    revocable: true,
+                    refUID: FixedBytes::<32>::ZERO, // EMPTY_UID
+                    data: event.data.into(),
+                    value: U256::ZERO,
+                },
             };
-            let encoded_data = attestation_data.abi_encode();
-            return Ok((0, encoded_data, Destination::Ethereum));
+            return Ok((attestation_request, Destination::Ethereum));
         }
-        TriggerData::Raw(data) => Ok((0, data.clone(), Destination::CliOutput)),
+        TriggerData::Raw(data) => {
+            Ok((AttestationRequest::abi_decode(&data)?, Destination::CliOutput))
+        }
         _ => Err(anyhow::anyhow!("Unsupported trigger data type")),
     }
 }
@@ -46,16 +55,12 @@ pub fn decode_trigger_event(trigger_data: TriggerData) -> Result<(u64, Vec<u8>, 
 /// Encodes the attestation output data for submission back to Ethereum
 ///
 /// # Arguments
-/// * `trigger_id` - The ID of the original trigger request
 /// * `output` - The attestation data to be encoded
 ///
 /// # Returns
 /// ABI encoded bytes ready for submission to Ethereum
-pub fn encode_trigger_output(trigger_id: u64, output: impl AsRef<[u8]>) -> WasmResponse {
-    WasmResponse {
-        payload: DataWithId { trigger_id, data: output.as_ref().to_vec().into() }.abi_encode(),
-        ordering: None,
-    }
+pub fn encode_trigger_output(output: impl AsRef<[u8]>) -> WasmResponse {
+    WasmResponse { payload: output.as_ref().to_vec().into(), ordering: None }
 }
 
 /// Solidity type definitions for EAS attestation processing
@@ -65,25 +70,27 @@ pub fn encode_trigger_output(trigger_id: u64, output: impl AsRef<[u8]>) -> WasmR
 use alloy_sol_macro::sol;
 
 sol! {
-    /// EAS Attested event - emitted when an attestation is made
-    event AttestedEvent(
+    /// Event emitted when an attestation is requested
+    event AttestationRequested(
+        address indexed creator,
+        bytes32 indexed schema,
         address indexed recipient,
-        address indexed attester,
-        bytes32 uid,
-        bytes32 indexed schema_uid
+        bytes data
     );
 
-    /// Response data structure with trigger ID
-    struct DataWithId {
-        uint64 trigger_id;
-        bytes data;
+    /// @notice A struct representing the arguments of the attestation request.
+    struct AttestationRequestData {
+        address recipient; // The recipient of the attestation.
+        uint64 expirationTime; // The time when the attestation expires (Unix timestamp).
+        bool revocable; // Whether the attestation is revocable.
+        bytes32 refUID; // The UID of the related attestation.
+        bytes data; // Custom attestation data.
+        uint256 value; // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
     }
 
-    /// Attestation event data for processing
-    struct AttestationEventData {
-        bytes32 uid;
-        bytes32 schema;
-        address recipient;
-        address attester;
+    /// @notice A struct representing the full arguments of the attestation request.
+    struct AttestationRequest {
+        bytes32 schema; // The unique identifier of the schema.
+        AttestationRequestData data; // The arguments of the attestation request.
     }
 }

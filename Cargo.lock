@@ -3585,6 +3585,7 @@ dependencies = [
 name = "wavs-eas-attest"
 version = "0.4.0"
 dependencies = [
+ "alloy-primitives",
  "alloy-sol-macro",
  "alloy-sol-types",
  "anyhow",

@@ -1,0 +1,38 @@
+No files changed, compilation skipped
+Warning: Detected artifacts built from source files that no longer exist. Run `forge clean` to make sure builds are in sync with project files.
+ - /Users/jacobhartnell/Dev/Demos/wavs-eas/src/interfaces/IWavsTrigger.sol
+Script ran successfully.
+
+== Logs ==
+  Registering new EAS schema:
+  Schema: string message
+  Resolver: 0x0000000000000000000000000000000000000000
+  Revocable: true
+  Schema registered successfully!
+  Schema UID: 0x3969bb076acfb992af54d51274c5c868641ca5344e1aacd0b1f5e4f80ac0822f
+  SCHEMA_REGISTRATION_RESULT:
+  {"schema_uid":"0x3969bb076acfb992af54d51274c5c868641ca5344e1aacd0b1f5e4f80ac0822f","schema":"string message","resolver":"0x0000000000000000000000000000000000000000","revocable":true}
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 17000
+
+Estimated gas price: 1.000000007 gwei
+
+Estimated total gas used for script: 134620
+
+Estimated amount required: 0.00013462000094234 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/jacobhartnell/Dev/Demos/wavs-eas/broadcast/Schema.s.sol/17000/registerSchema-latest.json
+
+Sensitive values saved to: /Users/jacobhartnell/Dev/Demos/wavs-eas/cache/Schema.s.sol/17000/registerSchema-latest.json
+
