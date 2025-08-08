@@ -5,7 +5,6 @@ import {ISchemaRegistry, SchemaRecord} from "@ethereum-attestation-service/eas-c
 import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import {EMPTY_UID} from "@ethereum-attestation-service/eas-contracts/contracts/Common.sol";
 import {SchemaRegistrar} from "contracts/SchemaRegistrar.sol";
-import {LogResolver} from "contracts/LogResolver.sol";
 import {Common} from "script/Common.s.sol";
 import {console} from "forge-std/console.sol";
 

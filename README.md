@@ -283,28 +283,15 @@ export RPC_URL=`bash ./script/get-rpc.sh`
 export SERVICE_TRIGGER_ADDR=$(jq -r '.service_contracts.trigger' .docker/deployment_summary.json)
 export EAS_ADDR=$(jq -r '.eas_contracts.eas' .docker/deployment_summary.json)
 export SCHEMA_REGISTRAR_ADDR=$(jq -r '.eas_contracts.schema_registrar' .docker/deployment_summary.json)
+export EAS_INDEXER_ADDR=$(jq -r '.eas_contracts.indexer' .docker/deployment_summary.json)
+export INDEXER_RESOLVER_ADDR=$(jq -r '.eas_contracts.indexer_resolver' .docker/deployment_summary.json)
 ```
 
 ### 1. Create and Register a Schema
 
 Register a custom schema for skill attestations.
 
-**What this does:** Creates a new schema in the EAS registry that defines the structure of attestations. This schema specifies that attestations will contain a skill name, proficiency level, and timestamp.
-
-```bash
-# Register the schema and capture output
-forge script script/Schema.s.sol:EasSchema \
-  --sig "registerSchema(string,string,string,bool)" \
-  $SCHEMA_REGISTRAR_ADDR \
-  "string skill,string level,uint256 timestamp" \
-  "0x0000000000000000000000000000000000000000" \
-  true \
-  --rpc-url $RPC_URL \
-  --broadcast \
-  --legacy
-```
-
-Extract the Schema UID from the output:
+**What this does:** Creates a new schema in the EAS schema that defines the structure of attestations. This schema specifies that attestations will contain a message. The indexer resolver will automatically index attestations for this schema onchain (only suitable for L2s / cheaper EVM environments).
 
 ```bash
 # Capture the forge output and extract schema UID automatically
@@ -312,7 +299,7 @@ forge script script/Schema.s.sol:EasSchema \
   --sig "registerSchema(string,string,string,bool)" \
   $SCHEMA_REGISTRAR_ADDR \
   "string message" \
-  "0x0000000000000000000000000000000000000000" \
+  $INDEXER_RESOLVER_ADDR \
   true \
   --rpc-url $RPC_URL \
   --broadcast \
@@ -331,9 +318,9 @@ Create an attestation request using your schema.
 
 ```bash
 # Trigger attestation creation via WAVS
-forge script script/Trigger.s.sol:EasTrigger --sig "triggerJsonAttestation(string,string,string,string)" \
+forge script script/Trigger.s.sol:EasTrigger --sig "triggerRawAttestation(string,string,string,string)" \
   "${SERVICE_TRIGGER_ADDR}" \
-  "${SCHEMA_UID}" \
+  ${SCHEMA_UID} \
   "0x742d35Cc6634C0532925a3b8D4f3e9dC9BfD16BB" \
   "Advanced Solidity Development Skills Verified" \
   --rpc-url $RPC_URL --broadcast
@@ -347,17 +334,12 @@ Check the attestation was created.
 
 ```bash
 # Query attestations for the schema and recipient
-forge script script/Trigger.s.sol:EasTrigger --sig "queryAttestations(string,string,string)" \
+forge script script/Trigger.s.sol:EasTrigger --sig "queryAttestations(string,string,string,string,uint256)" \
+  "${EAS_INDEXER_ADDR}" \
   "${EAS_ADDR}" \
   "${SCHEMA_UID}" \
   "0x742d35Cc6634C0532925a3b8D4f3e9dC9BfD16BB" \
-  --rpc-url $RPC_URL
-
-# Show specific attestation details (replace with actual attestation UID from logs)
-export ATTESTATION_UID="0x..." # Get this from the WAVS operator logs or events
-forge script script/Trigger.s.sol:EasTrigger --sig "showAttestation(string,string)" \
-  "${EAS_ADDR}" \
-  "${ATTESTATION_UID}" \
+  10 \
   --rpc-url $RPC_URL
 ```
 

@@ -3,7 +3,8 @@ pragma solidity 0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {SchemaRegistrar} from "../../src/contracts/SchemaRegistrar.sol";
-import {LogResolver} from "../../src/contracts/LogResolver.sol";
+import {IndexerResolver} from "../../src/contracts/IndexerResolver.sol";
+import {Indexer} from "@ethereum-attestation-service/eas-contracts/contracts/Indexer.sol";
 import {EAS} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import {SchemaRegistry} from "@ethereum-attestation-service/eas-contracts/contracts/SchemaRegistry.sol";
 import {IEAS} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
@@ -13,7 +14,8 @@ import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contr
 contract SchemaRegistrarTest is Test {
     SchemaRegistrar public registrar;
     SchemaRegistry public schemaRegistry;
-    LogResolver public resolver;
+    IndexerResolver public resolver;
+    Indexer public indexer;
     EAS public eas;
 
     address constant ZERO_ADDRESS = address(0);
@@ -24,7 +26,8 @@ contract SchemaRegistrarTest is Test {
         // Deploy contracts
         schemaRegistry = new SchemaRegistry();
         eas = new EAS(ISchemaRegistry(address(schemaRegistry)));
-        resolver = new LogResolver(IEAS(address(eas)));
+        indexer = new Indexer(IEAS(address(eas)));
+        resolver = new IndexerResolver(IEAS(address(eas)), indexer);
         registrar = new SchemaRegistrar(
             ISchemaRegistry(address(schemaRegistry))
         );
@@ -182,7 +185,10 @@ contract SchemaRegistrarTest is Test {
 
     function testRegister_ShouldAllowSameSchemaWithDifferentResolvers() public {
         // Create another resolver for testing
-        LogResolver resolver2 = new LogResolver(IEAS(address(eas)));
+        IndexerResolver resolver2 = new IndexerResolver(
+            IEAS(address(eas)),
+            indexer
+        );
 
         bytes32 schemaId1 = registrar.register(
             VALID_SCHEMA,

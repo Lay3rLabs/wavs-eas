@@ -3,7 +3,8 @@ pragma solidity 0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {Attester} from "../../src/contracts/Attester.sol";
-import {LogResolver} from "../../src/contracts/LogResolver.sol";
+import {IndexerResolver} from "../../src/contracts/IndexerResolver.sol";
+import {Indexer} from "@ethereum-attestation-service/eas-contracts/contracts/Indexer.sol";
 import {EAS} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import {SchemaRegistry} from "@ethereum-attestation-service/eas-contracts/contracts/SchemaRegistry.sol";
 import {IEAS, AttestationRequest, AttestationRequestData} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
@@ -43,7 +44,8 @@ contract MockWavsServiceManager is IWavsServiceManager {
 
 contract AttesterTest is Test {
     Attester public attester;
-    LogResolver public resolver;
+    IndexerResolver public resolver;
+    Indexer public indexer;
     EAS public eas;
     SchemaRegistry public schemaRegistry;
     MockWavsServiceManager public serviceManager;
@@ -59,7 +61,8 @@ contract AttesterTest is Test {
         // Deploy contracts
         schemaRegistry = new SchemaRegistry();
         eas = new EAS(ISchemaRegistry(address(schemaRegistry)));
-        resolver = new LogResolver(IEAS(address(eas)));
+        indexer = new Indexer(IEAS(address(eas)));
+        resolver = new IndexerResolver(IEAS(address(eas)), indexer);
         serviceManager = new MockWavsServiceManager();
         attester = new Attester(
             IEAS(address(eas)),
@@ -86,9 +89,6 @@ contract AttesterTest is Test {
 
     function testAttest_ShouldLogAttestedValue() public {
         uint256 value = 123456;
-
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Attested(schemaId, value);
 
         bytes32 uid = attester.attest(schemaId, address(0), abi.encode(value));
 
@@ -128,18 +128,6 @@ contract AttesterTest is Test {
         schemaData[1] = new bytes[](2);
         schemaData[1][0] = abi.encode(uint256(5));
         schemaData[1][1] = abi.encode(uint256(23423234));
-
-        // Expect all attestation events
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Attested(schemaId, 10);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Attested(schemaId, 100);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Attested(schemaId, 123456);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Attested(schemaId2, 5);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Attested(schemaId2, 23423234);
 
         bytes32[] memory uids = attester.multiAttest(
             schemas,
@@ -240,9 +228,6 @@ contract AttesterTest is Test {
         bytes32 uid = attester.attest(schemaId, address(0), abi.encode(value));
 
         // Then revoke it
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Revoked(schemaId, value);
-
         attester.revoke(schemaId, uid);
     }
 
@@ -286,18 +271,6 @@ contract AttesterTest is Test {
         schemaUids[1] = new bytes32[](2);
         schemaUids[1][0] = uids[3];
         schemaUids[1][1] = uids[4];
-
-        // Expect all revocation events
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Revoked(schemaId, 10);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Revoked(schemaId, 100);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Revoked(schemaId, 123456);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Revoked(schemaId2, 5);
-        vm.expectEmit(true, true, true, true);
-        emit LogResolver.Revoked(schemaId2, 23423234);
 
         // Revoke all attestations
         attester.multiRevoke(schemas, schemaUids);

@@ -10,8 +10,7 @@ The WAVS-EAS deployment includes the following components:
 - **SchemaRegistry**: Manages attestation schemas
 - **EAS**: Main Ethereum Attestation Service contract
 - **Indexer**: Provides efficient querying of attestations
-- **LogResolver**: Simple resolver for logging attestation events
-- **IndexerResolver**: Automatically indexes attestations on creation
+- **IndexerResolver**: Automatically indexes attestations on creation for efficient querying
 
 ### WAVS Integration
 - **Attester**: Main WAVS integration contract for creating attestations
@@ -66,7 +65,6 @@ SchemaRegistry: 0x...
 EAS: 0x...
 Attester: 0x...
 SchemaRegistrar: 0x...
-LogResolver: 0x...
 Indexer: 0x...
 IndexerResolver: 0x...
 EASAttestTrigger: 0x...
@@ -176,9 +174,6 @@ forge test --match-contract DeployEASTest -v
 
 # Test IndexerResolver functionality
 forge test --match-contract IndexerResolverTest -v
-
-# Test existing functionality remains intact
-forge test --match-contract LogResolverTest -v
 ```
 
 ## Advanced Configuration
@@ -196,15 +191,15 @@ bytes32 customSchemaId = schemaRegistrar.register(
 );
 ```
 
-### Using LogResolver for Simple Logging
+### Using IndexerResolver for Indexed Attestations
 
 If you don't need indexing but want event logging:
 
 ```solidity
-// Register schema with LogResolver instead
-bytes32 loggingSchemaId = schemaRegistrar.register(
+// Register schema with IndexerResolver for automatic indexing
+bytes32 indexedSchemaId = schemaRegistrar.register(
     "uint256 value",
-    ISchemaResolver(logResolverAddress),
+    ISchemaResolver(indexerResolverAddress),
     true
 );
 ```
@@ -221,7 +216,7 @@ bytes32 loggingSchemaId = schemaRegistrar.register(
 
 1. **Batch operations** when possible
 2. **Consider indexing needs** when designing schemas
-3. **Use LogResolver** for simple use cases that don't require querying
+3. **Use IndexerResolver** for all attestations that need to be queryable
 
 ## Troubleshooting
 

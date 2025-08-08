@@ -8,7 +8,7 @@ import {IEAS, EAS} from "@ethereum-attestation-service/eas-contracts/contracts/E
 import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import {Attester} from "../src/contracts/Attester.sol";
 import {SchemaRegistrar} from "../src/contracts/SchemaRegistrar.sol";
-import {LogResolver} from "../src/contracts/LogResolver.sol";
+
 import {IndexerResolver} from "../src/contracts/IndexerResolver.sol";
 import {Indexer} from "@ethereum-attestation-service/eas-contracts/contracts/Indexer.sol";
 import {EASAttestTrigger} from "../src/contracts/Trigger.sol";
@@ -23,7 +23,6 @@ contract DeployEAS is Common {
         address eas;
         address attester;
         address schemaRegistrar;
-        address logResolver;
         address indexer;
         address indexerResolver;
         address easAttestTrigger;
@@ -57,17 +56,12 @@ contract DeployEAS is Common {
         deployment.eas = address(eas);
         console.log("EAS deployed at:", deployment.eas);
 
-        // 3. Deploy LogResolver
-        LogResolver logResolver = new LogResolver(IEAS(deployment.eas));
-        deployment.logResolver = address(logResolver);
-        console.log("LogResolver deployed at:", deployment.logResolver);
-
-        // 4. Deploy Indexer
+        // 3. Deploy Indexer
         Indexer indexer = new Indexer(IEAS(deployment.eas));
         deployment.indexer = address(indexer);
         console.log("Indexer deployed at:", deployment.indexer);
 
-        // 5. Deploy IndexerResolver
+        // 4. Deploy IndexerResolver
         IndexerResolver indexerResolver = new IndexerResolver(
             IEAS(deployment.eas),
             indexer
@@ -75,14 +69,14 @@ contract DeployEAS is Common {
         deployment.indexerResolver = address(indexerResolver);
         console.log("IndexerResolver deployed at:", deployment.indexerResolver);
 
-        // 6. Deploy SchemaRegistrar
+        // 5. Deploy SchemaRegistrar
         SchemaRegistrar schemaRegistrar = new SchemaRegistrar(
             ISchemaRegistry(deployment.schemaRegistry)
         );
         deployment.schemaRegistrar = address(schemaRegistrar);
         console.log("SchemaRegistrar deployed at:", deployment.schemaRegistrar);
 
-        // 7. Deploy Attester (main WAVS integration contract)
+        // 6. Deploy Attester (main WAVS integration contract)
         Attester attester = new Attester(
             IEAS(deployment.eas),
             IWavsServiceManager(serviceManager)
@@ -90,7 +84,7 @@ contract DeployEAS is Common {
         deployment.attester = address(attester);
         console.log("Attester deployed at:", deployment.attester);
 
-        // 8. Deploy EASAttestTrigger
+        // 7. Deploy EASAttestTrigger
         EASAttestTrigger easAttestTrigger = new EASAttestTrigger();
         deployment.easAttestTrigger = address(easAttestTrigger);
         console.log(
@@ -98,7 +92,7 @@ contract DeployEAS is Common {
             deployment.easAttestTrigger
         );
 
-        // 9. Register basic schemas
+        // 8. Register basic schemas
         console.log("Registering schemas...");
 
         // Basic attestation schema for general data (with indexing)
@@ -131,7 +125,6 @@ contract DeployEAS is Common {
         console.log("EAS:", deployment.eas);
         console.log("Attester:", deployment.attester);
         console.log("SchemaRegistrar:", deployment.schemaRegistrar);
-        console.log("LogResolver:", deployment.logResolver);
         console.log("Indexer:", deployment.indexer);
         console.log("IndexerResolver:", deployment.indexerResolver);
         console.log("EASAttestTrigger:", deployment.easAttestTrigger);

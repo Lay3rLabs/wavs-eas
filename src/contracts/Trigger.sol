@@ -34,23 +34,8 @@ contract EASAttestTrigger {
         address recipient,
         string calldata data
     ) external {
-        // Create JSON payload for the EAS component
-        string memory jsonPayload = string(
-            abi.encodePacked(
-                '{"schema":"',
-                _bytes32ToHex(schema),
-                '","recipient":"',
-                _addressToHex(recipient),
-                '","data":"',
-                data,
-                '","expiration_time":0,"revocable":true}'
-            )
-        );
-
-        bytes memory triggerData = bytes(jsonPayload);
-
-        // Emit AttestationRequested event that the EAS component expects
-        emit AttestationRequested(msg.sender, schema, recipient, triggerData);
+        // Just emit the event with the string data as bytes
+        emit AttestationRequested(msg.sender, schema, recipient, bytes(data));
     }
 
     /// @notice Creates an attestation trigger with raw bytes data
@@ -62,39 +47,5 @@ contract EASAttestTrigger {
     ) external {
         // Emit AttestedEvent with default values for raw data
         emit AttestationRequested(msg.sender, schema, recipient, data);
-    }
-
-    /// @notice Converts bytes32 to hex string
-    /// @param value The bytes32 value to convert
-    /// @return Hex string representation
-    function _bytes32ToHex(
-        bytes32 value
-    ) internal pure returns (string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        bytes memory str = new bytes(66);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint256 i = 0; i < 32; i++) {
-            str[2 + i * 2] = alphabet[uint8(value[i] >> 4)];
-            str[3 + i * 2] = alphabet[uint8(value[i] & 0x0f)];
-        }
-        return string(str);
-    }
-
-    /// @notice Converts address to hex string
-    /// @param addr The address to convert
-    /// @return Hex string representation
-    function _addressToHex(address addr) internal pure returns (string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        bytes memory str = new bytes(42);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint256 i = 0; i < 20; i++) {
-            str[2 + i * 2] = alphabet[
-                uint8(uint160(addr) >> (8 * (19 - i) + 4))
-            ];
-            str[3 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i)))];
-        }
-        return string(str);
     }
 }

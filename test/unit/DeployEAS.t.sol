@@ -7,7 +7,7 @@ import {IEAS} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.s
 import {ISchemaRegistry, SchemaRecord} from "@ethereum-attestation-service/eas-contracts/contracts/ISchemaRegistry.sol";
 import {Indexer} from "@ethereum-attestation-service/eas-contracts/contracts/Indexer.sol";
 import {IndexerResolver} from "../../src/contracts/IndexerResolver.sol";
-import {LogResolver} from "../../src/contracts/LogResolver.sol";
+
 import {Attester} from "../../src/contracts/Attester.sol";
 import {SchemaRegistrar} from "../../src/contracts/SchemaRegistrar.sol";
 import {EASAttestTrigger} from "../../src/contracts/Trigger.sol";
@@ -45,10 +45,7 @@ contract DeployEASTest is Test {
             deployment.schemaRegistrar != address(0),
             "SchemaRegistrar not deployed"
         );
-        assertTrue(
-            deployment.logResolver != address(0),
-            "LogResolver not deployed"
-        );
+
         assertTrue(deployment.indexer != address(0), "Indexer not deployed");
         assertTrue(
             deployment.indexerResolver != address(0),
@@ -202,15 +199,6 @@ contract DeployEASTest is Test {
         assertTrue(
             deployment.schemaRegistrar != address(0),
             "SchemaRegistrar should be deployed"
-        );
-
-        // Verify LogResolver is properly configured
-        LogResolver logResolver = LogResolver(payable(deployment.logResolver));
-        // Note: LogResolver might not have a public getter for EAS
-        // We verify it by checking it was deployed successfully
-        assertTrue(
-            deployment.logResolver != address(0),
-            "LogResolver should be deployed"
         );
 
         // Verify EASAttestTrigger is deployed

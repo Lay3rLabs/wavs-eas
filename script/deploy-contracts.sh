@@ -44,7 +44,8 @@ export EAS_REGISTRY_ADDR=$(jq -r '.logs[] | select(type == "string" and startswi
 export EAS_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("EAS deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
 export EAS_ATTESTER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("Attester deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
 export EAS_SCHEMA_REGISTRAR_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("SchemaRegistrar deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
-export EAS_LOG_RESOLVER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("LogResolver deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
+export EAS_INDEXER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("Indexer deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
+export EAS_INDEXER_RESOLVER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("IndexerResolver deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
 export EAS_ATTEST_TRIGGER_ADDR=$(jq -r '.logs[] | select(type == "string" and startswith("EASAttestTrigger deployed at:")) | split(": ")[1]' .docker/eas_deploy.json 2>/dev/null || echo "")
 
 # Use EAS Attest Trigger as the main service trigger
@@ -60,7 +61,8 @@ cat > .docker/deployment_summary.json << EOF
     "eas": "${EAS_ADDR}",
     "attester": "${EAS_ATTESTER_ADDR}",
     "schema_registrar": "${EAS_SCHEMA_REGISTRAR_ADDR}",
-    "log_resolver": "${EAS_LOG_RESOLVER_ADDR}"
+    "indexer": "${EAS_INDEXER_ADDR}",
+    "indexer_resolver": "${EAS_INDEXER_RESOLVER_ADDR}"
   },
   "service_contracts": {
     "trigger": "${SERVICE_TRIGGER_ADDR}"
@@ -79,7 +81,8 @@ echo "   EAS_REGISTRY_ADDR: ${EAS_REGISTRY_ADDR}"
 echo "   EAS_ADDR: ${EAS_ADDR}"
 echo "   EAS_ATTESTER_ADDR: ${EAS_ATTESTER_ADDR}"
 echo "   EAS_SCHEMA_REGISTRAR_ADDR: ${EAS_SCHEMA_REGISTRAR_ADDR}"
-echo "   EAS_LOG_RESOLVER_ADDR: ${EAS_LOG_RESOLVER_ADDR}"
+echo "   EAS_INDEXER_ADDR: ${EAS_INDEXER_ADDR}"
+echo "   EAS_INDEXER_RESOLVER_ADDR: ${EAS_INDEXER_RESOLVER_ADDR}"
 echo "   EAS_ATTEST_TRIGGER_ADDR: ${EAS_ATTEST_TRIGGER_ADDR}"
 echo ""
 echo "🎯 Service Contracts:"
