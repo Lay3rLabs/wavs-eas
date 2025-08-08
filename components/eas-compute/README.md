@@ -1,3 +1,5 @@
 # EAS Compute Demo
 
-Shows how to perform over EAS Attestations.
+TODO:
+- Update to query something from the onchain indexer
+- Does a basic calculation over that data
